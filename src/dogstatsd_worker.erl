@@ -28,12 +28,17 @@ start_link() ->
 %%%===================================================================
 
 init([]) ->
-    {ok, Socket} = gen_udp:open(0),
-    State = #state{
-               socket = Socket,
-               host = stillir:get_config(dogstatsd, agent_address),
-               port = stillir:get_config(dogstatsd, agent_port)
-              },
+    State = case stillir:get_config(dogstatsd, send_metrics) of
+                true ->
+                    {ok, Socket} = gen_udp:open(0),
+                    #state{
+                       socket = Socket,
+                       host = stillir:get_config(dogstatsd, agent_address),
+                       port = stillir:get_config(dogstatsd, agent_port)
+                      };
+                false ->
+                    #state{socket = no_send}
+            end,
     {ok, State}.
 
 handle_call(_Request, _From, State) ->
@@ -66,6 +71,8 @@ build_line({Type, Name, Value, SampleRate, Tags}) ->
                         Tags),
     [LineStart, TagLine].
 
+send_line(_, #state{socket = no_send}) ->
+    ok;
 send_line(Line, #state{socket = Socket, host = Host, port = Port}) ->
     ok = gen_udp:send(Socket, Host, Port, Line).
 
