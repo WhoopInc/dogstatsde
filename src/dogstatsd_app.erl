@@ -5,7 +5,7 @@
 start(_Type, _Args) ->
     Config = [
               {agent_address, "AGENT_ADDRESS", [{default, "localhost"}]}
-             ,{agent_port, "AGENT_PORT", [{default, 8126}, {transform, integer}]}
+             ,{agent_port, "AGENT_PORT", [{default, 8125}, {transform, integer}]}
              ,{send_metrics, "SEND_METRICS", [{default, true}, {transform, fun transform_boolean/1}]}
              ],
     ok = stillir:set_config(dogstatsd, Config),
