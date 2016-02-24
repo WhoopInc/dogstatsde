@@ -7,6 +7,10 @@ start(_Type, _Args) ->
               {agent_address, "AGENT_ADDRESS", [{default, "localhost"}]}
              ,{agent_port, "AGENT_PORT", [{default, 8125}, {transform, integer}]}
              ,{send_metrics, "SEND_METRICS", [{default, true}, {transform, fun transform_boolean/1}]}
+             ,{vm_stats, "VM_STATS", [{default, true}, {transform, fun transform_boolean/1}]}
+             ,{vm_stats_delay, "VM_STATS_DELAY", [{default, 60000}, {transform, integer}]}
+             ,{vm_stats_scheduler, "VM_STATS_SCHEDULER", [{default, true}, {transform, fun transform_boolean/1}]}
+             ,{vm_stats_base_key, "VM_STATS_BASE_KEY", [{default, "erlang.vm"}]}
              ],
     ok = stillir:set_config(dogstatsd, Config),
     dogstatsd_sup:start_link().

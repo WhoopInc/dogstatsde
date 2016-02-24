@@ -18,8 +18,10 @@
          send/5
         ,gauge/2, gauge/3, gauge/4
         ,counter/2, counter/3, counter/4
+        ,increment/2, increment/3, increment/4
         ,histogram/2, histogram/3, histogram/4
         ,timer/2, timer/3, timer/4
+        ,timing/2, timing/3, timing/4
         ,set/2, set/3, set/4
         ]).
 
@@ -47,6 +49,10 @@ send(Type, Name, Value, SampleRate, Tags) ->
                send(Type, Name, Value, SampleRate, Tags)
 ).
 
+-define(ALIAS_TYPE_2(Alias, Real), Alias(A, B) -> Real(A, B)).
+-define(ALIAS_TYPE_3(Alias, Real), Alias(A, B, C) -> Real(A, B, C)).
+-define(ALIAS_TYPE_4(Alias, Real), Alias(A, B, C, D) -> Real(A, B, C, D)).
+
 ?SPEC_TYPE_2(gauge).
 ?SPEC_TYPE_3(gauge).
 ?SPEC_TYPE_4(gauge).
@@ -60,6 +66,9 @@ send(Type, Name, Value, SampleRate, Tags) ->
 ?MK_TYPE_2(counter).
 ?MK_TYPE_3(counter).
 ?MK_TYPE_4(counter).
+?ALIAS_TYPE_2(increment, counter).
+?ALIAS_TYPE_3(increment, counter).
+?ALIAS_TYPE_4(increment, counter).
 
 ?SPEC_TYPE_2(histogram).
 ?SPEC_TYPE_3(histogram).
@@ -74,6 +83,9 @@ send(Type, Name, Value, SampleRate, Tags) ->
 ?MK_TYPE_2(timer).
 ?MK_TYPE_3(timer).
 ?MK_TYPE_4(timer).
+?ALIAS_TYPE_2(timing, timer).
+?ALIAS_TYPE_3(timing, timer).
+?ALIAS_TYPE_4(timing, timer).
 
 ?SPEC_TYPE_2(set).
 ?SPEC_TYPE_3(set).
