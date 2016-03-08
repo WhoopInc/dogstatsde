@@ -13,7 +13,9 @@
 -record(state, {
           socket,
           host,
-          port
+          port,
+          prefix,
+          tags
          }).
 
 %%%===================================================================
@@ -34,7 +36,9 @@ init([]) ->
                     #state{
                        socket = Socket,
                        host = stillir:get_config(dogstatsd, agent_address),
-                       port = stillir:get_config(dogstatsd, agent_port)
+                       port = stillir:get_config(dogstatsd, agent_port),
+                       prefix = stillir:get_config(dogstatsd, global_prefix),
+                       tags = stillir:get_config(dogstatsd, global_tags)
                       };
                 false ->
                     #state{socket = no_send}
@@ -46,7 +50,7 @@ handle_call(_Request, _From, State) ->
     {reply, Reply, State}.
 
 handle_cast(Data, State) ->
-    Line = build_line(Data),
+    Line = build_line(Data, State),
     send_line(Line, State),
     {noreply, State}.
 
@@ -60,7 +64,15 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-build_line({Type, Name, Value, SampleRate, Tags}) ->
+build_line({Type, Name, Value, SampleRate, Tags}, #state{prefix="", tags=GlobalTags}) ->
+    Tags1 = maps:merge(GlobalTags, Tags),
+    build_line_helper({Type, Name, Value, SampleRate, Tags1});
+build_line({Type, Name, Value, SampleRate, Tags}, #state{prefix=GlobalPrefix, tags=GlobalTags}) ->
+    Tags1 = maps:merge(GlobalTags, Tags),
+    Name1 = [GlobalPrefix, $., Name],
+    build_line_helper({Type, Name1, Value, SampleRate, Tags1}).
+
+build_line_helper({Type, Name, Value, SampleRate, Tags}) ->
     LineStart = io_lib:format("~s:~b|~s|@~.2f", [Name, Value, type_to_str(Type), SampleRate]),
     TagLine = maps:fold(fun (Key, Val, []) ->
                                 ["|#", kv(Key, Val)];
