@@ -1,0 +1,24 @@
+case erlang:function_exported(rebar3, main, 1) of
+    true ->
+        %% rebar3
+        CONFIG;
+    false ->
+        %% rebar 2.x or older
+        %% rebuild deps
+        Rebar3Deps = proplists:get_value(deps, CONFIG),
+
+        %% whenever adding a new hew package dependency, this fun should be
+        %% updated
+        HexToRepo = fun(worker_pool) -> "https://github.com/inaka/worker_pool.git" end,
+
+        ConvertDep =
+        fun({DepName, {git, Repo, {ref, Tag}}}) ->
+            {DepName, ".*", {git, Repo, {tag, Tag}}};
+           ({HexDepName, HexDepVersion}) ->
+            {HexDepName, ".*", {git, HexToRepo(HexDepName), {tag, HexDepVersion}}}
+        end,
+
+        Rebar2Deps = [ ConvertDep(Dep) || Dep <- Rebar3Deps ],
+
+        lists:keystore(deps, 1, CONFIG, {deps, Rebar2Deps})
+end.
