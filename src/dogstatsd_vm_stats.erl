@@ -67,7 +67,7 @@ init(BaseKey) ->
     {{input,In},{output,Out}} = erlang:statistics(io),
     PrevGC = erlang:statistics(garbage_collection),
     case {sched_time_available(), stillir:get_config(dogstatsd, vm_stats_scheduler)} of
-        {true, {ok,true}} ->
+        {true, true} ->
             {ok, #state{key = [BaseKey,$.],
                         timer_ref = Ref,
                         delay = Delay,
