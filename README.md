@@ -7,7 +7,7 @@ DogStatsD is Datadog's extension of StatsD. It adds tags to the metrics.
 The defaults assume that you're running a statsd server on localhost (true if the agent is installed locally).
 
 There are a number of configuration settings. You can either provide them as environment variables in ALL_CAPS
-or in an Erlang config file in all_lowercase.
+or in your `sys.config` file in all_lowercase, under the `dogstatsd` key.
 
     | name               | type    | default       | info                                                                                  |
     | ----               | ----    | -------       | ----                                                                                  |

@@ -4,18 +4,36 @@
 
 start(_Type, _Args) ->
     Config = [
-              {agent_address, "AGENT_ADDRESS", [{default, "localhost"}]}
-             ,{agent_port, "AGENT_PORT", [{default, 8125}, {transform, integer}]}
-             ,{send_metrics, "SEND_METRICS", [{default, true}, {transform, fun transform_boolean/1}]}
-             ,{global_prefix, "GLOBAL_PREFIX", [{default, ""}]}
-             ,{global_tags, "GLOBAL_TAGS", [{default, #{}}, {transform, fun transform_map/1}]}
-             ,{vm_stats, "VM_STATS", [{default, true}, {transform, fun transform_boolean/1}]}
-             ,{vm_stats_delay, "VM_STATS_DELAY", [{default, 60000}, {transform, integer}]}
-             ,{vm_stats_scheduler, "VM_STATS_SCHEDULER", [{default, true}, {transform, fun transform_boolean/1}]}
-             ,{vm_stats_base_key, "VM_STATS_BASE_KEY", [{default, "erlang.vm"}]}
+              gen_config_for(agent_address, "localhost")
+             ,gen_config_for(agent_port, 8125, integer)
+             ,gen_config_for(send_metrics, true, fun transform_boolean/1)
+             ,gen_config_for(global_prefix, "")
+             ,gen_config_for(global_tags, #{}, fun transform_map/1)
+             ,gen_config_for(vm_stats, true, fun transform_boolean/1)
+             ,gen_config_for(vm_stats_delay, 60000, integer)
+             ,gen_config_for(vm_stats_scheduler, true, fun transform_boolean/1)
+             ,gen_config_for(vm_stats_base_key, "erlang.vm")
              ],
     ok = stillir:set_config(dogstatsd, Config),
     dogstatsd_sup:start_link().
+
+gen_config_for(Key, Default) -> gen_config_for(Key, Default, undefined).
+
+gen_config_for(Key, Default0, Transform) ->
+    Default1 = case application:get_env(dogstatsd, Key) of
+        undefined -> Default0;
+        {ok, Value} -> Value
+    end,
+    Options0 = [{default, Default1}],
+
+    Options1 = case Transform =:= undefined of
+        true -> Options0;
+        false -> [{transform, Transform} | Options0]
+    end,
+
+    EnvVarName = string:to_upper(erlang:atom_to_list(Key)),
+
+    {Key, EnvVarName, Options1}.
 
 stop(_State) ->
     ok.
