@@ -64,35 +64,50 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-build_line({Type, Name, Value, SampleRate, Tags}, #state{prefix="", tags=GlobalTags}) ->
-    Tags1 = maps:merge(GlobalTags, Tags),
-    build_line_helper({Type, Name, Value, SampleRate, Tags1});
-build_line({Type, Name, Value, SampleRate, Tags}, #state{prefix=GlobalPrefix, tags=GlobalTags}) ->
-    Tags1 = maps:merge(GlobalTags, Tags),
-    Name1 = [GlobalPrefix, $., Name],
-    build_line_helper({Type, Name1, Value, SampleRate, Tags1}).
 
-build_line_helper({Type, Name, Value, SampleRate, Tags}) ->
-    LineStart = io_lib:format("~s:~b|~s|@~.2f", [Name, Value, type_to_str(Type), SampleRate]),
-    TagLine = maps:fold(fun (Key, Val, []) ->
-                                ["|#", kv(Key, Val)];
-                            (Key, Val, Acc) ->
-                                [Acc, ",", kv(Key, Val)]
-                        end,
-                        [],
-                        Tags),
+build_line({metric, Data}, State) ->
+    build_metric_line(Data, State);
+build_line({event, Data}, State) ->
+    build_event_line(Data, State).
+
+build_metric_line({Type, Name, Value, SampleRate, Tags}, State) ->
+    LineStart = io_lib:format("~s:~.3f|~s|@~.2f", [prepend_global_prefix(Name, State), float(Value),
+                                                    metric_type_to_str(Type), float(SampleRate)]),
+    TagLine = build_tag_line(Tags, State),
     [LineStart, TagLine].
+
+prepend_global_prefix(Name, #state{prefix=""}) -> Name;
+prepend_global_prefix(Name, #state{prefix=GlobalPrefix}) -> [GlobalPrefix, $., Name].
+
+build_event_line({Title, Text, Type, Priority, Tags}, State) ->
+    TitleBin = iodata_to_bin(Title),
+    TextBin = iodata_to_bin(Text),
+    TitleLen = byte_size(TitleBin),
+    TextLen = byte_size(TextBin),
+    LineStart = io_lib:format("_e{~b,~b}:~s|~s|t:~s|p:~s", [TitleLen, TextLen, TitleBin,
+                                                            TextBin, Type, Priority]),
+    TagLine = build_tag_line(Tags, State),
+    [LineStart, TagLine].
+
+build_tag_line(Tags, #state{tags=GlobalTags}) ->
+    maps:fold(fun (Key, Val, []) ->
+                      ["|#", kv(Key, Val)];
+                  (Key, Val, Acc) ->
+                      [Acc, ",", kv(Key, Val)]
+              end,
+              [],
+              maps:merge(GlobalTags, Tags)).
 
 send_line(_, #state{socket = no_send}) ->
     ok;
 send_line(Line, #state{socket = Socket, host = Host, port = Port}) ->
     ok = gen_udp:send(Socket, Host, Port, Line).
 
-type_to_str(counter) -> "c";
-type_to_str(gauge) -> "g";
-type_to_str(histogram) -> "h";
-type_to_str(timer) -> "ms";
-type_to_str(set) -> "s".
+metric_type_to_str(counter) -> "c";
+metric_type_to_str(gauge) -> "g";
+metric_type_to_str(histogram) -> "h";
+metric_type_to_str(timer) -> "ms";
+metric_type_to_str(set) -> "s".
 
 kv(K, V) when is_atom(K) ->
     kv(atom_to_list(K), V);
@@ -104,3 +119,45 @@ kv(K, V) when is_number(V) ->
     kv(K, io_lib:format("~b", [V]));
 kv(K, V) ->
     [K, $:, V].
+
+iodata_to_bin(Bin) when is_binary(Bin) -> Bin;
+iodata_to_bin(IoList) -> iolist_to_binary(IoList).
+
+%%% Tests
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+build_line_test_() ->
+    State = #state{
+        prefix = "test_global_prefix",
+        tags = #{"test" => true}
+    },
+
+    [{"for an event",
+        begin
+            Title1 = ["my ", <<"eve">>, ["nt's title"]],
+            Text1 = <<"my event's text">>,
+            Type1 = success,
+            Priority1 = low,
+            Tags1 = #{"event" => "awesome"},
+
+            ExpectedLine1 = <<"_e{16,15}:my event's title|my event's text|t:success|p:low|#event:awesome,test:true">>,
+            ActualLine1 = build_line({event, {Title1, Text1, Type1, Priority1, Tags1}}, State),
+
+            ?_assertEqual(ExpectedLine1, iolist_to_binary(ActualLine1))
+        end},
+      {"for a metric",
+        begin
+            Type2 = histogram,
+            Name2 = ["mymetric_", [<<"name">>]],
+            Value2 = 28.0,
+            SampleRate2 = 12,
+            Tags2 = #{"version" => 42},
+
+            ExpectedLine2 = <<"test_global_prefix.mymetric_name:28.000|h|@12.00|#test:true,version:42">>,
+            ActualLine2 = build_line({metric, {Type2, Name2, Value2, SampleRate2, Tags2}}, State),
+
+            ?_assertEqual(ExpectedLine2, iolist_to_binary(ActualLine2))
+        end}].
+
+-endif.
