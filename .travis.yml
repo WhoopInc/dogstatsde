@@ -1,0 +1,15 @@
+language: erlang
+otp_release:
+   - 17.0
+   - 17.5
+   - 18.0
+   - 18.1
+env:
+  - REBAR_VSN=2
+  - REBAR_VSN=3
+before_install:
+  - ./scripts/install-rebar.sh
+install:
+  - ./scripts/install-deps.sh
+script:
+  - ./scripts/run-tests.sh
