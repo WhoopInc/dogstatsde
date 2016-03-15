@@ -39,7 +39,7 @@ send_metric(Type, Name, Value, SampleRate, Tags) ->
 send_event(Title, Text, Type, Priority, Tags) ->
     send({event, {Title, Text, Type, Priority, Tags}}).
 
--spec send({atom(), {any()}}) -> ok.
+-spec send({atom(), tuple()}) -> ok.
 send(Data) ->
     wpool:cast(dogstatsd_worker, Data).
 
