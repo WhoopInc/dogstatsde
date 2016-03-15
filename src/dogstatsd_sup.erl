@@ -33,4 +33,17 @@ init(_Args) ->
       intensity => 5,
       period => 60
      },
-    {ok, {SupFlags, Children}}.
+    new_to_old({ok, {SupFlags, Children}}).
+
+new_to_old({ok, {SupFlags, Children}}) ->
+    {ok, {new_to_old_supflags(SupFlags), new_to_old_children(Children)}}.
+new_to_old_supflags(#{strategy := S, intensity := I, period := P}) ->
+    {S, I, P}.
+new_to_old_children(Children) ->
+    lists:map(fun (Child = #{id := Id, start := Start, restart := Restart, shutdown := Shutdown}) ->
+                      Type = maps:get(type, Child, worker),
+                      {StartModule,_,_} = Start,
+                      Modules = maps:get(modules, Child, StartModule),
+                      {Id, Start, Restart, Shutdown, Type, Modules}
+              end,
+              Children).

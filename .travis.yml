@@ -12,3 +12,4 @@ install:
   - ./scripts/install-deps.sh
 script:
   - ./scripts/run-tests.sh
+  - ./scripts/run-dialyzer.sh

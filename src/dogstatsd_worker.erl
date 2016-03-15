@@ -49,7 +49,7 @@ handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
-handle_cast(Data, #state{socket = no_send} = State) ->
+handle_cast(_Data, #state{socket = no_send} = State) ->
     {noreply, State};
 handle_cast(Data, State) ->
     Line = build_line(Data, State),
