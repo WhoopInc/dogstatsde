@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/WhoopInc/dogstatsde.svg?branch=master)](https://travis-ci.org/WhoopInc/dogstatsde)
+
 # A dogstatsd client for Erlang #
 
 DogStatsD is Datadog's extension of StatsD. It adds tags to the metrics.
