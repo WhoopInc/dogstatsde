@@ -49,9 +49,11 @@ handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
+handle_cast(Data, #state{socket = no_send} = State) ->
+    {noreply, State};
 handle_cast(Data, State) ->
     Line = build_line(Data, State),
-    send_line(Line, State),
+    ok = send_line(Line, State),
     {noreply, State}.
 
 handle_info(_Info, State) ->
@@ -98,8 +100,6 @@ build_tag_line(Tags, #state{tags=GlobalTags}) ->
               [],
               maps:merge(GlobalTags, Tags)).
 
-send_line(_, #state{socket = no_send}) ->
-    ok;
 send_line(Line, #state{socket = Socket, host = Host, port = Port}) ->
     ok = gen_udp:send(Socket, Host, Port, Line).
 
