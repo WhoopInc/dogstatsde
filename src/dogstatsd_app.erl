@@ -3,10 +3,10 @@
 -export([start/2, stop/1]).
 
 start(_Type, _Args) ->
+    configure(),
     dogstatsd_sup:start_link().
 
 stop(_State) ->
-    configure(),
     ok.
 
 configure() ->
