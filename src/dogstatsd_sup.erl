@@ -43,7 +43,7 @@ new_to_old_children(Children) ->
     lists:map(fun (Child = #{id := Id, start := Start, restart := Restart, shutdown := Shutdown}) ->
                       Type = maps:get(type, Child, worker),
                       {StartModule,_,_} = Start,
-                      Modules = maps:get(modules, Child, StartModule),
+                      Modules = maps:get(modules, Child, [StartModule]),
                       {Id, Start, Restart, Shutdown, Type, Modules}
               end,
               Children).

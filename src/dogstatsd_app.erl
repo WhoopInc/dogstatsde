@@ -3,6 +3,13 @@
 -export([start/2, stop/1]).
 
 start(_Type, _Args) ->
+    dogstatsd_sup:start_link().
+
+stop(_State) ->
+    configure(),
+    ok.
+
+configure() ->
     Config = [
               {agent_address, "AGENT_ADDRESS", [{default, "localhost"}]}
              ,{agent_port, "AGENT_PORT", [{default, 8125}, {transform, integer}]}
@@ -15,11 +22,7 @@ start(_Type, _Args) ->
              ,{vm_stats_base_key, "VM_STATS_BASE_KEY", [{default, "erlang.vm"}]}
              ],
     Config1 = read_app_config(Config),
-    ok = stillir:set_config(dogstatsd, Config1),
-    dogstatsd_sup:start_link().
-
-stop(_State) ->
-    ok.
+    ok = stillir:set_config(dogstatsd, Config1).
 
 read_app_config(Config) ->
     lists:map(fun ({AppVar, EnvVar, Opts0}) ->
@@ -106,4 +109,16 @@ transform_map_test_() -> [
                          ,?_assertError({cannot_parse_kv_pair, _}, transform_map("#{hello,world}"))
                          ].
 
+supervisor_test_() ->
+    {setup,
+     fun () ->
+             application:ensure_all_started(worker_pool),
+             configure()
+     end,
+     fun (_) ->
+             application:stop(worker_pool)
+     end,
+     [
+      ?_assertMatch({ok,_Pid}, dogstatsd_sup:start_link())
+     ]}.
 -endif.
