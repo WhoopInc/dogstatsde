@@ -121,4 +121,23 @@ supervisor_test_() ->
      [
       ?_assertMatch({ok,_Pid}, dogstatsd_sup:start_link())
      ]}.
+
+application_test_() ->
+    {setup,
+     fun () ->
+             meck:new(gen_udp, [unstick]),
+             meck:expect(gen_udp, send, fun (_Socket, _Address, _Port, _Packet) -> ok end),
+             meck:expect(gen_udp, open, fun (_Port) -> {ok, fake_socket} end),
+             application:ensure_all_started(dogstatsd)
+     end,
+     fun (_) ->
+             meck:unload(gen_udp),
+             application:stop(worker_pool)
+     end,
+     [
+      ?_assertMatch(ok, dogstatsd:gauge("test", 1))
+     ,?_assert(meck:validate(gen_udp))
+     ,?_assert(meck:called(gen_udp, send, '_'))
+     ]}.
+
 -endif.
