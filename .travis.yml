@@ -2,7 +2,7 @@ language: erlang
 otp_release:
    - 17.5
    - 18.0
-   - 18.3
+   - 18.2
 env:
   - REBAR_VSN=2
   - REBAR_VSN=3
