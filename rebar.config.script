@@ -6,10 +6,18 @@ case erlang:function_exported(rebar3, main, 1) of
         %% rebar 2.x or older
         %% rebuild deps
         Rebar3Deps = proplists:get_value(deps, CONFIG),
+        Rebar3TestDeps =
+        proplists:get_value(deps,
+                            proplists:get_value(test,
+                                                proplists:get_value(profiles,
+                                                                    CONFIG))),
 
-        %% whenever adding a new hew package dependency, this fun should be
+        %% whenever adding a new Hex package dependency, this fun should be
         %% updated
-        HexToRepo = fun(worker_pool) -> "https://github.com/inaka/worker_pool.git" end,
+        HexToRepo = fun(worker_pool) -> "https://github.com/inaka/worker_pool.git";
+                       (lager) -> "https://github.com/basho/lager.git";
+                       (meck) -> "https://github.com/eproxus/meck.git"
+                    end,
 
         ConvertDep =
         fun({DepName, {git, Repo, {ref, Tag}}}) ->
@@ -18,7 +26,7 @@ case erlang:function_exported(rebar3, main, 1) of
             {HexDepName, ".*", {git, HexToRepo(HexDepName), {tag, HexDepVersion}}}
         end,
 
-        Rebar2Deps = [ ConvertDep(Dep) || Dep <- Rebar3Deps ],
+        Rebar2Deps = [ ConvertDep(Dep) || Dep <- Rebar3Deps ++ Rebar3TestDeps ],
 
         lists:keystore(deps, 1, CONFIG, {deps, Rebar2Deps})
 end.
