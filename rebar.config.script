@@ -1,3 +1,4 @@
+%% -*- mode: erlang; -*-
 case erlang:function_exported(rebar3, main, 1) of
     true ->
         %% rebar3
@@ -16,7 +17,8 @@ case erlang:function_exported(rebar3, main, 1) of
         %% updated
         HexToRepo = fun(worker_pool) -> "https://github.com/inaka/worker_pool.git";
                        (lager) -> "https://github.com/basho/lager.git";
-                       (meck) -> "https://github.com/eproxus/meck.git"
+                       (meck) -> "https://github.com/eproxus/meck.git";
+                       (stillir) -> "https://github.com/heroku/stillir.git"
                     end,
 
         ConvertDep =
