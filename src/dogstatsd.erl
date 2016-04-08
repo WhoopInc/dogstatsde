@@ -32,7 +32,7 @@
         ]).
 
 -spec send_metric(metric_type(), metric_name(), metric_value(), metric_sample_rate(), metric_tags()) -> ok.
-send_metric(Type, Name, Value, SampleRate, Tags) ->
+send_metric(Type, Name, Value, SampleRate, Tags) when is_number(Value), is_number(SampleRate) ->
     send({metric, {Type, Name, Value, SampleRate, Tags}}).
 
 -spec send_event(event_title(), event_text(), event_type(), event_priority(), event_tags()) -> ok.
@@ -117,3 +117,30 @@ event(Title, Text, Type, Priority) -> event(Title, Text, Type, Priority, #{}).
 -spec event(event_title(), event_text(), event_type(), event_priority(), event_tags()) -> ok.
 event(Title, Text, Type, Priority, Tags) ->
     send_event(Title, Text, Type, Priority, Tags).
+
+%%% Tests
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+test_setup() ->
+    meck:new(wpool),
+    meck:expect(wpool, 'cast', fun (dogstatsd_worker, _Data) -> ok end).
+
+test_teardown(_) ->
+    meck:unload(wpool).
+
+gauge_test_() ->
+    {setup,
+     fun test_setup/0,
+     fun test_teardown/1,
+     [
+      ?_assertEqual(ok, dogstatsd:gauge("foo.bar", 1))
+     ,?_assertEqual(ok, dogstatsd:gauge("foo.bar", 1, 0.5))
+     ,?_assertEqual(ok, dogstatsd:gauge("foo.bar", 1, #{baz => qux}))
+     ,?_assertEqual(ok, dogstatsd:gauge("foo.bar", 1, 0.25, #{baz => qux}))
+     ,?_assertError(function_clause, dogstatsd:gauge("foo.bar", #{baz => qux}))
+     ,?_assertError(function_clause, dogstatsd:gauge("foo.bar", #{baz => qux}, 0.5))
+     ,?_assertError(function_clause, dogstatsd:gauge("foo.bar", 1, "hello"))
+     ]}.
+
+-endif.
