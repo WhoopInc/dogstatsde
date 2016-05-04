@@ -13,9 +13,9 @@ configure() ->
     Config = [
               {agent_address, "AGENT_ADDRESS", [{default, "localhost"}]}
              ,{agent_port, "AGENT_PORT", [{default, 8125}, {transform, integer}]}
-             ,{send_metrics, "SEND_METRICS", [{default, true}, {transform, fun transform_boolean/1}]}
              ,{global_prefix, "GLOBAL_PREFIX", [{default, ""}]}
              ,{global_tags, "GLOBAL_TAGS", [{default, #{}}, {transform, fun transform_map/1}]}
+             ,{send_metrics, "SEND_METRICS", [{default, true}, {transform, fun transform_boolean/1}]}
              ,{vm_stats, "VM_STATS", [{default, true}, {transform, fun transform_boolean/1}]}
              ,{vm_stats_delay, "VM_STATS_DELAY", [{default, 60000}, {transform, integer}]}
              ,{vm_stats_scheduler, "VM_STATS_SCHEDULER", [{default, true}, {transform, fun transform_boolean/1}]}
