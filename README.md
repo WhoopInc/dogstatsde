@@ -45,6 +45,33 @@ or in an Erlang config file in all_lowercase.
 dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version > Vsn })
 ```
 
+### VM Stats ###
+
+If `VM_STATS` is not disabled, dogstatsd will periodically run `erlang:statistics/1` and friends and collect data on the VM's performance:
+
+| name                         | erlang call                              | info                                                                               |
+| ----                         | -----------                              | ----                                                                               |
+| `proc_count`                 | `erlang:system_info(process_count)`      |                                                                                    |
+| `proc_limit`                 | `erlang:system_info(process_limit)`      |                                                                                    |
+| `messages_in_queues`         | `process_info(Pid, message_queue_len)`   | over all PIDs                                                                      |
+| `modules`                    | `length(code:all_loaded())`              |                                                                                    |
+| `run_queue`                  | `erlang:statistics(run_queue)`           |                                                                                    |
+| `error_logger_queue_len`     | `process_info(Pid, message_queue_len)`   | where `Pid` belongs to `error_logger`                                              |
+| `memory.total`               | `erlang:memory()`                        |                                                                                    |
+| `memory.procs_userd`         | `erlang:memory()`                        |                                                                                    |
+| `memory.atom_used`           | `erlang:memory()`                        |                                                                                    |
+| `memory.binary`              | `erlang:memory()`                        |                                                                                    |
+| `memory.ets`                 | `erlang:memory()`                        |                                                                                    |
+| `io.bytes_in`                | `erlang:statistics(io)`                  |                                                                                    |
+| `io.bytes_out`               | `erlang:statistics(io)`                  |                                                                                    |
+| `gc.count`                   | `erlang:statistics(garbage_collection)`  |                                                                                    |
+| `gc.words_reclaimed`         | `erlang:statistics(words_reclaimed)`     |                                                                                    |
+| `reductions`                 | `erlang:statistics(reductions)`          |                                                                                    |
+| `scheduler_wall_time.active` | `erlang:statistics(scheduler_wall_time)` | there are multiple schedulers, and the `scheduler` tag differentiates between them |
+| `scheduler_wall_time.total`  | `erlang:statistics(scheduler_wall_time)` | there are multiple schedulers, and the `scheduler` tag differentiates between them |
+
+![screen-shot of VM stats in Datadog](/img/erlang-vm-stats.jpg)
+
 ## Metric types ##
 
 All metrics share the same signature:
