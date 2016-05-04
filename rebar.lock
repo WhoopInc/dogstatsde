@@ -1,5 +1,2 @@
-[{<<"stillir">>,
-  {git,"https://github.com/heroku/stillir.git",
-       {ref,"71cd4803bf7105927e0706a59bc2d6c8c328e072"}},
-  0},
+[{<<"stillir">>,{pkg,<<"stillir">>,<<"1.0.0">>},0},
  {<<"worker_pool">>,{pkg,<<"worker_pool">>,<<"1.0.4">>},0}].
