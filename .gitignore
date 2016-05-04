@@ -6,6 +6,7 @@ _*
 *.plt
 *.swp
 *.swo
+.#*
 .erlang.cookie
 ebin
 log
@@ -18,4 +19,3 @@ _tdeps
 logs
 /_build
 /deps
-
