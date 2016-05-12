@@ -1,6 +1,6 @@
 {application, 'dogstatsd',
  [{description, "An OTP library"},
-  {vsn, "0.1.0"},
+  {vsn, git},
   {registered, []},
   {applications,
    [
@@ -12,7 +12,8 @@
   {env,[]},
   {mod, {dogstatsd_app, []}},
 
-  {contributors, []},
-  {licenses, []},
-  {links, []}
+  {maintainers, ["Nathaniel Waisbrot <waisbrot@whoop.com>"]},
+  {licenses, ["LAGPL"]},
+  {links, [{"GitHub", "https://github.com/WhoopInc/dogstatsde"}]},
+  {pkg_name, "dogstatsde"}
  ]}.

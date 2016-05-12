@@ -70,7 +70,7 @@ If `VM_STATS` is not disabled, dogstatsd will periodically run `erlang:statistic
 | `scheduler_wall_time.active` | `erlang:statistics(scheduler_wall_time)` | there are multiple schedulers, and the `scheduler` tag differentiates between them |
 | `scheduler_wall_time.total`  | `erlang:statistics(scheduler_wall_time)` | there are multiple schedulers, and the `scheduler` tag differentiates between them |
 
-![screen-shot of VM stats in Datadog](/img/erlang-vm-stats.jpg)
+![screen-shot of VM stats in Datadog](img/erlang-vm-stats.jpg)
 
 ## Metric types ##
 
