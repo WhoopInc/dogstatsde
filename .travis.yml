@@ -19,8 +19,8 @@ script:
 deploy:
   skip_cleanup: true
   provider: script
-  script: scripts/deploy-hex.sh
+  script: ./scripts/deploy-hex.sh
   on:
     tags: true
     condition: $REBAR_VSN = '3'
-    erlang: 18.2
+    otp_release: 18.2
