@@ -1,5 +1,5 @@
 {application, 'dogstatsd',
- [{description, "An OTP library"},
+ [{description, "Send StatsD metrics to Datadog"},
   {vsn, git},
   {registered, []},
   {applications,
