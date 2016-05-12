@@ -90,4 +90,4 @@ All metrics share the same signature:
 * Tags are given as a map. The keys and values can be atoms, strings, or numbers.
 
 
-Metric name and value are required. Sample rate defaults to 1.0. Tags defaults to an empty map.
+Metric name and value are required. Sample rate defaults to 1.0. Tags defaults to an empty tag-set, but the value of `GLOBAL_TAGS` (which also defaults to an empty tag-set) is always merged with the passed tags.
