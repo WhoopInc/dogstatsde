@@ -1,9 +1,4 @@
-#!/bin/sh -ex
-
-if [[ $TRAVIS_OTP_RELEASE != "18.2" ]]; then
-    echo Skipping deploy for this OTP release version
-    exit 0
-fi
+#!/bin/bash -ex
 
 echo Create directories
 mkdir -p ~/.hex
@@ -21,6 +16,6 @@ echo Edit version tag in app.src
 vi -e -c '%s/{vsn, *.*}/{vsn, "'${TRAVIS_TAG}'"}/g|w|q' src/dogstatsd.app.src
 
 echo Publish to Hex
-echo 'Y' | ./vendor/rebar hex publish
+echo 'Y' | ./vendor/rebar3 hex publish
 
 echo Done
