@@ -1,4 +1,14 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
+
+if [[ $TRAVIS_TAG && $TRAVIS_OTP_RELEASE != $MAIN_OTP ]]; then
+    echo Skip installation for non-primary tests of a tag-build
+    exit 0
+fi
+
+if [ $ELIXIR_VSN ]; then
+    kiex install stable
+    exit 0
+fi
 
 mkdir vendor
 if [ $REBAR_VSN -eq 2 ]; then

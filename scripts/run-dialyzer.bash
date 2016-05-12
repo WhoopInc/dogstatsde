@@ -1,4 +1,9 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
+
+if [[ $TRAVIS_OTP_RELEASE != $MAIN_OTP ]]; then
+    echo Skipping dialyzer for non-primary build
+    exit 0
+fi
 
 if [ $REBAR_VSN -eq 2 ]; then
     echo "No dialyzer run under rebar2"

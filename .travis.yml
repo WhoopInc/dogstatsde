@@ -2,25 +2,28 @@ language: erlang
 sudo: false
 otp_release:
 - 17.5
-- 18.0
 - 18.2
 env:
+  global:
+  - MAIN_OTP=18.2
   matrix:
   - REBAR_VSN=2
   - REBAR_VSN=3
+matrix:
+  include:
+  - env: ELIXIR_VSN=stable REBAR_VSN=
 
 before_install:
-- echo "--> OTP = ${TRAVIS_OTP_RELEASE}"
-- ./scripts/install-rebar.sh
+- ./scripts/install-prereqs.bash
 install:
-- ./scripts/install-deps.sh
+- ./scripts/install-deps.bash
 script:
-- ./scripts/run-tests.sh
-- ./scripts/run-dialyzer.sh
+- ./scripts/run-tests.bash
+- ./scripts/run-dialyzer.bash
 deploy:
   skip_cleanup: true
   provider: script
-  script: ./scripts/deploy-hex.sh
+  script: ./scripts/deploy-hex.bash
   on:
     tags: true
-    condition: $REBAR_VSN = '3' && $TRAVIS_OTP_RELEASE = "18.2"
+    condition: $REBAR_VSN = '3' && $TRAVIS_OTP_RELEASE = $MAIN_OTP

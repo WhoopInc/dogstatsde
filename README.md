@@ -25,12 +25,12 @@ or in an Erlang config file in all_lowercase.
 
 ## Use ##
 
+### Erlang ###
+
 1. List dogstatsd in your `rebar.config` file
 
 ```erlang
-{deps, [
-        {dogstatsd,     {git, "https://github.com/WhoopInc/dogstatsde.git"}}
-]}.
+{dogstatsd, "1.0.0", {pkg, dogstatsde}}
 ```
 
 2. List the dogstatsd application in your *.app.src file
@@ -42,7 +42,27 @@ or in an Erlang config file in all_lowercase.
 5. For custom metrics:
 
 ```erlang
-dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version > Vsn })
+dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version => Vsn })
+```
+
+### Elixir ###
+
+1. List dogstatsd dependency in your `mix.exs` file
+
+```elixir
+{:dogstatsd, "~> 1.0.0", hex: :dogstatsde}
+```
+
+2. List `:dogstatsd` as an application in your `mix.exs`
+
+3. Provide configuration as needed when starting up
+
+4. For VM stats, no action is needed -- they'll collect on their own as long as the application is running
+
+5. For custom metrics:
+
+```elixir
+Dogstatsd.gauge("users.active", user_count, %{ :shard => shard_id, :version => vsn })
 ```
 
 ### VM Stats ###
@@ -84,6 +104,16 @@ All metrics share the same signature:
 
 -spec MetricFunction(metric_name(), metric_value(), metric_sample_rate(), metric_tags()) -> ok.
 ```
+
+Some metrics have aliases
+
+| name      | alias   |
+| ----      | ------- |
+| gauge     |         |
+| increment | counter |
+| histogram |         |
+| timing    | timer   |
+| set       |         |
 
 * The metric name is a string value with dots to separate levels of namespacing.
 * The sample rate is a number between [0.0,1.0]. This is the probability of sending a particular metric.
