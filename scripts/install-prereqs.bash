@@ -5,7 +5,7 @@ if [[ $TRAVIS_TAG && $TRAVIS_OTP_RELEASE != $MAIN_OTP ]]; then
     exit 0
 fi
 
-if [ $TRAVIS_ELIXIR_VERSION ]; then
+if [ $ELIXIR_VSN ]; then
     kiex install $ELIXIR_VSN
     exit 0
 fi

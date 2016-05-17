@@ -11,9 +11,9 @@ env:
   - REBAR_VSN=3
 matrix:
   include:
-  - env: REBAR_VSN=
+  - env: ELIXIR_VSN=1.2.5 REBAR_VSN=
     otp_release: 18.2
-    elixir: 1.2.0
+    elixir: 1.2.5
 
 before_install:
 - ./scripts/install-prereqs.bash
