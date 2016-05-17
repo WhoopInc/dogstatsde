@@ -12,6 +12,7 @@ env:
 matrix:
   include:
   - env: ELIXIR_VSN=stable REBAR_VSN=
+    otp_release: 18.2
 
 before_install:
 - ./scripts/install-prereqs.bash
