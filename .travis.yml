@@ -11,7 +11,7 @@ env:
   - REBAR_VSN=3
 matrix:
   include:
-  - env: ELIXIR_VSN=stable REBAR_VSN=
+  - env: ELIXIR_VSN=1.2.5 REBAR_VSN=
     otp_release: 18.2
 
 before_install:
