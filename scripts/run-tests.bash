@@ -11,7 +11,7 @@ if [ $REBAR_VSN -eq 2 ]; then
 elif [ $REBAR_VSN -eq 3 ]; then
     ./vendor/rebar3 eunit
 elif [ $ELIXIR_VSN ]; then
-    source "$HOME/.kiex/scripts/kiex"
+    kiex user $ELIXIR_VSN
     mix compile
     mix test
 else

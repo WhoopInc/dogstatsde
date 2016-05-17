@@ -10,7 +10,7 @@ if [ $REBAR_VSN -eq 2 ]; then
 elif [ $REBAR_VSN -eq 3 ]; then
     echo no-op
 elif [ $ELIXIR_VSN ]; then
-    source "$HOME/.kiex/scripts/kiex"
+    kiex use $ELIXIR_VSN
     mix local.hex --force
     mix deps.get
 else
