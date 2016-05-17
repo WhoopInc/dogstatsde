@@ -11,6 +11,7 @@ elif [ $REBAR_VSN -eq 3 ]; then
     echo no-op
 elif [ $ELIXIR_VSN ]; then
     source "$HOME/.kiex/scripts/kiex"
+    mix local.hex --force
     mix deps.get
 else
     echo Unknown rebar version requested: $REBAR_VSN
