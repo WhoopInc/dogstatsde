@@ -9,7 +9,7 @@ if [ $REBAR_VSN -eq 2 ]; then
     ./vendor/rebar get-deps
 elif [ $REBAR_VSN -eq 3 ]; then
     echo no-op
-elif [ $ELIXIR_VSN ]; then
+elif [ $TRAVIS_ELIXIR_VERSION ]; then
     source "$HOME/.kiex/scripts/kiex"
     mix local.hex --force
     mix deps.get
