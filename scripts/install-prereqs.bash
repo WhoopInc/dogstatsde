@@ -6,8 +6,8 @@ if [[ $TRAVIS_TAG && $TRAVIS_OTP_RELEASE != $MAIN_OTP ]]; then
 fi
 
 if [ $ELIXIR_VSN ]; then
-    kiex list known
-    kiex install $ELIXIR_VSN
+    ./scripts/kiex list known
+    ./scripts/kiex install $ELIXIR_VSN
     exit 0
 fi
 

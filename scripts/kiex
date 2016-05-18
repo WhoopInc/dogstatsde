@@ -1,0 +1,982 @@
+#!/usr/bin/env bash
+
+KIEX_HOME="$HOME/.kiex"
+KIEX_BIN_PATH="$KIEX_HOME/bin/kiex"
+KIEX_SCRIPTS_PATH="$KIEX_HOME/scripts"
+
+base_path="$HOME/.kiex"
+build_path="${base_path}/builds"
+elixirs_path="${base_path}/elixirs"
+elixirs_source_path="\$HOME/.kiex/elixirs"
+mix_archives_path="${base_path}/mix/archives"
+mix_archives_source_path="\$HOME/.kiex/mix/archives"
+kiex_url="https://raw.githubusercontent.com/taylor/kiex/master/kiex"
+cached_release_list="$KIEX_HOME/.cached_release_list"
+cached_branch_list="$KIEX_HOME/.cached_branch_list"
+
+USER_AGENT="kiex-elixir-installer"
+
+SYSTEM=$(uname -s)
+
+# Expect GITHUB_OAUTH_TOKEN to be set
+AUTH_HDR="Authorization: token ${GITHUB_OAUTH_TOKEN}"
+
+# Running bash -l from csh does not change $SHELL
+if [ -z "$USERSHELL" ] ; then
+  USERSHELL=$(basename $SHELL)
+fi
+
+if [ "$SYSTEM" = "Linux" ] ; then
+  if [ -n "$(which lsb_release 2> /dev/null)" ] ; then
+    lsb_id=$(lsb_release -s -i)
+    case $lsb_id in
+      Ubuntu) DISTRO="Ubuntu" ;;
+      Centos) DISTRO="Centos" ;;
+      Gentoo) DISTRO="Gentoo" ;;
+      Arch)   DISTRO="Arch" ;;
+      Fedora) DISTRO="Fedora" ;;
+      *) DISTRO="$lsb_id" ;;
+    esac
+  elif (( "$(grep -ic arch /etc/os-release)" > 0 )) ; then
+    DISTRO="Arch"
+  elif (( "$(grep -ic Ubuntu /etc/issue)" > 0 )) ; then
+    DISTRO="Ubuntu"
+  elif (( "$(grep -ic Centos /etc/issue)" > 0 )) ; then
+    DISTRO="Centos"
+  elif (( "$([[ -f /etc/inittab ]] && grep -ic Gentoo /etc/inittab)" > 0 )) ; then
+    DISTRO="Gentoo"
+  else
+    echo "Unknown Linux distribution"
+  fi
+elif [ "$SYSTEM" = "FreeBSD" ] ; then
+  DISTRO=FreeBSD
+elif [ "$SYSTEM" = "Darwin" ] ; then
+  #DISTRO=$(uname -r)
+  DISTRO=OSX
+else
+  echo "Unsupported system $SYSTEM"
+  exit 1
+fi
+
+INSTALL_KIEX=0
+if [ "$1" = "install_kiex" ] ; then
+  INSTALL_KIEX=1
+elif [ "$1" = "install" -a "$2" = "kiex" ] ; then
+  INSTALL_KIEX=1
+fi
+
+if [ "$INSTALL_KIEX" = 1 ] ; then
+  if [ -x $KIEX_HOME/bin/kiex ] ; then
+    exec "$KIEX_HOME/bin/kiex" selfupdate
+  else
+    mkdir -p "${KIEX_HOME}/bin"
+    \curl -sSL -H "$AUTH_HDR" -o "$KIEX_HOME/bin/kiex" https://raw.githubusercontent.com/taylor/kiex/master/kiex
+    chmod +x "$KIEX_HOME/bin/kiex"
+
+    echo "Running initial environment setup"
+    exec "$KIEX_HOME/bin/kiex" setup
+  fi
+
+  exit 0
+fi
+
+
+######################################
+######################################
+
+function usage() {
+  me=$(basename $0)
+  #echo "$me <list [known]|install <version>|use <version>>"
+  echo "$me commands:"
+  printf "%b" "    list                      - shows currently installed Elixirs\n"
+  printf "%b" "    list known                - shows available Elixir releases\n"
+  printf "%b" "    list branches             - shows available Elixir branches\n"
+  printf "%b" "    install <version>         - installs the given release version\n"
+  printf "%b" "    alias <version> <alias>   - creates an alias for the given version\n"
+  printf "%b" "    use <version> [--default] - uses the given version for this shell\n"
+  printf "%b" "    shell <version>           - uses the given version for this shell\n"
+  printf "%b" "    default <version>         - sets the default version to be used\n"
+#  printf "%b" "    setup             - install kiex into \$HOME/.kiex\n"
+  printf "%b" "    selfupdate                - updates kiex itself\n"
+  printf "%b" "    implode                   - removes kiex and all installed Elixirs\n"
+  printf "%b" "    reset                     - resets default Elixir version to null\n"
+}
+
+
+# NOTE: work-around for differences in readlink on BSD and Linux
+# Based on the Stack Overflow answer http://stackoverflow.com/a/1116890
+function readlink_f() {
+  TARGET_FILE="$1"
+
+  cd `dirname "$TARGET_FILE"`
+  TARGET_FILE=`basename "$TARGET_FILE"`
+
+  # Iterate down a (possible) chain of symlinks
+  while [ -L "$TARGET_FILE" ] ; do
+      TARGET_FILE=`readlink "$TARGET_FILE"`
+      cd `dirname "$TARGET_FILE"`
+      TARGET_FILE=`basename "$TARGET_FILE"`
+  done
+
+  # Compute the canonicalized name by finding the physical path
+  # for the directory we're in and appending the target file.
+  PHYS_DIR=`pwd -P`
+  RESULT="${PHYS_DIR}/${TARGET_FILE}"
+  echo $RESULT
+}
+
+function check_erlang_release() {
+  if [ "$SYSTEM" = "Linux" ] ; then
+    ERL_EXEC_PATH="$(dirname $(readlink -f $(which erl 2> /dev/null)))"
+    #ERL_EXEC_PATH might show the path to the 'erl' executable in the
+    #erlang/bin or /erlang/erts-*/bin folder.
+    if [ -e $ERL_EXEC_PATH/../releases/RELEASES ] ; then
+        erlang_release_file="$ERL_EXEC_PATH/../releases/RELEASES"
+    else
+        erlang_release_file="$ERL_EXEC_PATH/../../releases/RELEASES"
+    fi
+  elif [ "$SYSTEM" = "Darwin" -o "$SYSTEM" = "FreeBSD" ] ; then
+    erlang_release_file="$(dirname $(readlink_f $(which erl 2> /dev/null)))/../releases/RELEASES"
+  else
+      echo "Unknown system $SYSTEM"
+      return 1
+  fi
+
+  if [ ! -e "$erlang_release_file" ] ; then
+    echo "Failed to find the erlang release file!" 1>&2
+    return 1
+  fi
+
+  erlang_release=($(awk -F, 'NR==1 {gsub(/"/,"",$3);print $3}' "$erlang_release_file" | sed 's/R\([0-9]*\)\([A-Z]\)/\1 \2 /'))
+  r="${erlang_release[0]}"
+  c="${erlang_release[1]}"
+  cn="${erlang_release[2]}"
+
+  #echo "erlang release: ${erlang_release[*]}, r: $r, c: $c, n: $cn"
+  #elixir_req_str="Elixir requires Erlang ${erlang_min_release_full} or later"
+
+  if [ -z "$r" ] ; then
+    echo "Failed to extract the erlang release!" 1>&2
+    false
+  elif [[ -n "$erlang_max_release" ]] && (( $r > $erlang_max_release )) ; then
+    false
+  elif (( $r > $erlang_min_release )) ; then
+    true
+  elif (( $r < $erlang_min_release )) ; then
+    false
+  elif (( $r == $erlang_min_release )) ; then
+    if [ -z "$erlang_min_release_canidate" ] ; then
+      true
+    elif [ -n "$erlang_min_release_canidate" -a -z "$c" ] ; then
+      false
+    elif [ "$erlang_min_release_canidate" == "A" -a "$c" == "B" ] ; then
+      true
+    elif [ "$erlang_min_release_canidate" == "$c" ] ; then
+      if [ -n "$erlang_min_release_canidate_n" ] ; then
+        if [ -z "$cn" ] ; then
+          false
+        elif (( $cn < $erlang_min_release_canidate_n )) ; then
+          false
+        else
+          true
+        fi
+      else
+        true
+      fi
+    else
+      # unknown character after release...
+      false
+    fi
+  fi
+}
+
+function bin_found() {
+  if [ -z "$1" ] ; then
+    false
+  elif [ -z "$(which $1 2> /dev/null)" ] ; then
+    echo "ERROR: $1 not found in \$PATH" 1>&2
+    false
+  else
+    true
+  fi
+}
+
+function exit_on_unmet_prereqs() {
+  deps_check
+  if [ ! "$?" = 0 ]
+  then
+    exit 1
+  fi
+}
+
+function erlang_req_info() {
+  if [ -n "$erlang_max_release" ] ; then
+    echo "That Elixir requires Erlang ${erlang_min_release_full} or later but before ${erlang_before_release_full}"
+  else
+    echo "That Elixir requires Erlang ${erlang_min_release_full} or later"
+  fi
+
+  echo "Erlang installation choices:"
+  echo "   * Download - https://www.erlang-solutions.com/downloads/download-erlang-otp"
+  echo "                http://www.erlang.org/download.html"
+  echo "   * Kerl - https://github.com/spawngrid/kerl"
+  echo "   * Package manager -"
+  echo "           Arch: See AUR package,"
+  echo "           FreeBSD: pkg install erlang"
+  echo "           OS X: brew install erlang"
+  echo "           Ubuntu/Debian/CentOS see erlang-solutions.com"
+}
+
+function deps_check() {
+  error=0
+  errors=0
+
+  bin=erl
+  ( bin_found $bin && check_erlang_release ) || error=1
+  [[ $error = 1 ]] && erlang_req_info
+  errors=$(( $errors + $error ))
+
+  error=0
+  bin=git
+  bin_found $bin || error=1
+  [[ $error = 1 ]] && echo "    Install $bin and try again"
+  errors=$(( $errors + $error ))
+
+  error=0
+  if [ "$SYSTEM" = "FreeBSD" ] ; then
+    bin=gmake
+    bin_found $bin || error=1
+    [[ $error = 1 ]] && echo "    Install $bin and try again"
+    errors=$(( $errors + $error ))
+  fi
+
+  if [ ! "$errors" = 0 ] ; then false ; else true ; fi
+}
+
+# TODO: add csh/tcsh support.  test zsh support
+function create_kiex_env_script() {
+  ## Backup the current scripts
+  D=$(date +%Y%m%d.%H%M)
+  if [ -d ../scripts ] ; then
+    cp ../scripts/kiex ../scripts/kiex.bak-$D
+    cp ../scripts/kiex.bash ../scripts/kiex.bash.bak-$D
+    cp ../scripts/kiex.csh ../scripts/kiex.csh.bak-$D
+    cp ../scripts/kiex.fish ../scripts/kiex.fish.bak-$D
+  fi
+
+  ## Generic loader
+  cat <<"EOF"> "$KIEX_SCRIPTS_PATH/kiex"
+## load correct version for this \$SHELL
+( ( env | grep '^SHELL=' | grep -qic '/csh$' ) && ( set | grep -qc '^BASH=' ; test $? -gt 0 ) ) \
+  && source $HOME/.kiex/scripts/kiex.csh \
+  || source $HOME/.kiex/scripts/kiex.bash
+EOF
+
+  ## Bash and Zsh
+  cat <<"EOF"> "$KIEX_SCRIPTS_PATH/kiex.bash"
+KIEX_HOME="$HOME/.kiex"
+export PATH=$KIEX_HOME/bin:$PATH
+[[ -f $KIEX_HOME/elixirs/.default ]] && source $KIEX_HOME/elixirs/.default
+
+function kiex() {
+  if [ "$1" = "use" ] ; then
+    #eval "$($HOME/.kiex/bin/kiex $*|grep source)"
+    source_line="$(USERSHELL=notcsh $HOME/.kiex/bin/kiex $*|grep source)"
+    if [ -z "$source_line" ] ; then
+      echo "Failed to $*"
+    else
+      eval "$source_line"
+      shift
+      echo "Using $*"
+    fi
+  else
+    $HOME/.kiex/bin/kiex $*
+  fi
+}
+EOF
+
+  ## CSH
+  cat <<"EOF"> "$KIEX_SCRIPTS_PATH/kiex.csh"
+set KIEX_HOME="$HOME/.kiex"
+setenv PATH "$KIEX_HOME/bin:$PATH"
+
+if ( -f $KIEX_HOME/elixirs/.default.csh ) then
+  source $KIEX_HOME/elixirs/.default.csh
+endif
+EOF
+
+  ## Fish
+  cat <<"EOF"> "$KIEX_SCRIPTS_PATH/kiex.fish"
+set KIEX_HOME $HOME/.kiex
+setenv PATH $KIEX_HOME/bin $PATH
+
+if test -f $KIEX_HOME/elixirs/.default.fish
+  source $KIEX_HOME/elixirs/.default.fish
+end
+EOF
+}
+
+function setup() {
+  quiet=0
+  update=0
+  if [ "$1" = "quiet" ] ; then
+    quiet=1
+    shift
+  fi
+  if [ "$1" = "update" ] ; then
+    echo "Updating the kiex installation in $KIEX_HOME"
+    update=1
+  fi
+
+  grep -sv '^#' ~/.bashrc | grep -isq kiex
+  [[ $? = 0 ]] && in_bashrc=$HOME/.bashrc
+  grep -sv '^#' ~/.profile | grep -isq kiex
+  [[ $? = 0 ]] && in_profile=$HOME/.profile
+  grep -sv '^#' ~/.bash_profile | grep -isq kiex
+  [[ $? = 0 ]] && in_bash_profile=$HOME/.bash_profile
+  grep -sv '^#' ~/.zshrc | grep -isq kiex
+  [[ $? = 0 ]] && in_zshrc=$HOME/.zshrc
+  grep -sv '^#' ~/.zsh_profile | grep -isq kiex
+  [[ $? = 0 ]] && in_zsh_profile=$HOME/.zsh_profile
+
+  str=""
+  for s in $in_bashrc $in_profile $in_bash_profile $in_zshrc $in_zsh_profile ; do
+    [[ -z "$str" ]] && str="$s" || str="${str}, $s"
+  done
+  if [ -z "$str"  ] ; then
+    echo "    Kiex sourcing line not found in ~/.bashrc, ~/.bash_profile, ~/.profile, ~/.zshrc, or ~/.zsh_profile"
+    source_line_found=0
+  else
+    echo "    Kiex sourcing line found in: ${str}"
+    source_line_found=1
+  fi
+
+  mkdir -p "$KIEX_HOME/"{bin,builds,elixirs,scripts}
+  mkdir -p "${KIEX_HOME}/mix/archives"
+
+  create_kiex_env_script
+
+  typeset elixirs
+
+  elixirs=($(
+    cd "$elixirs_path"
+    find . -maxdepth 1 -mindepth 1 -type d 2> /dev/null | sort
+    ))
+
+  for version in "${elixirs[@]//.\/}"
+  do
+    if [[ ! -x "$elixirs_path/$version/bin/elixir" ]]
+    then
+      continue
+    fi
+    mkdir -p "${mix_archives_path}/${version}"
+    create_env_file "${version/elixir-/}"
+  done
+
+  if [ $source_line_found = 0 ] ; then
+    echo "    Add the following to your shell's config file (.bashrc/.zshrc/.cshrc):"
+    echo "        test -s \"\$HOME/.kiex/scripts/kiex\" && source \"\$HOME/.kiex/scripts/kiex\""
+  fi
+
+  if [ "$update" = 1 ] ; then
+    echo "kiex installed in $KIEX_HOME is now updated ☺ "
+  else
+    echo "kiex has been installed in $KIEX_HOME ☺ "
+  fi
+}
+
+function self_update_reloaded() {
+  cd "$KIEX_HOME/bin"
+  setup quiet update
+}
+
+function self_update() {
+  # if [ "$SYSTEM" = "Linux" ] ; then
+  #   mypath=$(dirname $(readlink -f $0))
+  # elif [ "$SYSTEM" = "Darwin" ] ; then
+  #   mypath=$(dirname $(readlink_f $0))
+  # else
+  #     echo "Unknown system $SYSTEM"
+  #     return 1
+  # fi
+
+  # cd $mypath
+
+  cd "$KIEX_HOME/bin"
+
+  D=$(date +%Y%m%d.%H%M)
+  cp kiex kiex.bak-$D
+
+  mkdir -p "$KIEX_HOME/bin"
+  \curl -L -H "$AUTH_HDR" -H "User-Agent: $USER_AGENT" -sSL -o "$KIEX_HOME/bin/kiex" "$kiex_url"
+  chmod +x "$KIEX_HOME/bin/kiex"
+  #exec $KIEX_HOME/bin/kiex setup update
+  exec $KIEX_HOME/bin/kiex selfupdatereloaded
+
+  #setup quiet
+
+  #curl -qs -o kiex "$kiex_url"
+  #chmod +x kiex
+  #echo "kiex installed in $mypath is now updated"
+  #echo "kiex installed in $KIEX_HOME is now updated ☺ "
+}
+
+function kiex_implode() {
+  echo -n "Type YES to remove the kiex install and all elixirs: "
+  read resp
+  if [ ! "$resp" = "YES" ] ; then
+    echo "Aborting!"
+    exit 0
+  fi
+
+  if [ -d "$KIEX_HOME" ] ; then
+    rm -rf "$KIEX_HOME"
+  fi
+
+  echo "You can now remove the kiex source lines from your startup script.  It looks like:"
+  echo "    test -s \"\$HOME/.kiex/scripts/kiex\" && source \"\$HOME/.kiex/scripts/kiex\""
+  echo " or"
+  echo "    [[ -s \"\$HOME/.kiex/scripts/kiex\" ]] && source \"\$HOME/.kiex/scripts/kiex\""
+}
+
+
+function get_elixir_branches() {
+  # TODO: add cache support
+  # x=$(curl -i -H "$AUTH_HDR" -H "User-Agent: $USER_AGENT" -H "Accept: application/json" -qs https://api.github.com/repos/elixir-lang/elixir/branches |grep '"name":|ETag:')
+  x=$(\curl -i -H "$AUTH_HDR" -H "User-Agent: $USER_AGENT" -H "Accept: application/json" -qs https://api.github.com/repos/elixir-lang/elixir/branches |grep '"name":')
+  x=$(echo $x | tr ',' '\n' |grep name\":|sed 's/.*name":"\([^"]*\)"/\1/')
+  #x=${x//\"name\":/}
+  #x=${x//[\",]/}
+  #x=${x//v/}
+
+  echo "$x" | sed 's/^/    /'
+}
+
+function list_branches() {
+  echo "Getting the available branches from https://github.com/elixir-lang/elixir/branches"
+  echo
+  elixir_branches=$(get_elixir_branches)
+
+  echo "Current Elixir branches: "
+  printf "%b" "${elixir_branches}\n"
+}
+
+# function get_cached_elixir_releases() {
+#   tail -n +2 $cached_release_list
+# }
+#
+# function get_cached_releases_etag() {
+#   xetag=$(grep "^#Etag:" $cached_release_list)
+#   echo ${xetag//#Etag:}
+# }
+#
+# function update_release_cache() {
+#   x="$*"
+#   xetag=$(echo $x|grep ETag)
+#   xetag=${xetag//ETag: /}
+#   xetag=${xetag//"/}
+#   new_etag=${xetag//ETag: /}
+#   cached_etag=$(get_cached_releases_etag)
+#   echo "$x"
+# }
+
+function get_known_elixir_releases() {
+  # TODO: finish adding caching support with etags
+  # xetag=$(curl -i -H "User-Agent: $USER_AGENT" -qs https://api.github.com/repos/elixir-lang/elixir/releases |grep "^ETag")
+  # etag=${xetag//Etag: "/}
+#
+#   x=$(curl -i -H "User-Agent: $USER_AGENT" -H "Accept: application/json" -qs https://api.github.com/repos/elixir-lang/elixir/releases |grep '"tag_name":|ETag')
+#   xetag=$(echo $x|grep ETag)
+#   x=$(echo $x|grep -v ETag)
+
+  x=$(\curl -i -H "$AUTH_HDR" -H "User-Agent: $USER_AGENT" -H 'Accept: application/json' -qs https://api.github.com/repos/elixir-lang/elixir/releases | tr ',' '\n' | grep '"tag_name":')
+  x=${x//\"tag_name\":/}
+  x=${x//[\",]/}
+  x=${x//v/}
+
+  # update_release_cache "$x"
+  echo "$x" | sed 's/^/    /'
+}
+
+function list_known() {
+  echo "Getting the available releases from https://github.com/elixir-lang/elixir/releases"
+  echo
+  elixir_releases=$(get_known_elixir_releases)
+  #elixir_releases=$x
+
+  echo "Known Elixir releases: "
+  printf "%b" "${elixir_releases}\n"
+}
+
+function valid_known_release() {
+  ver="$1"
+  get_known_elixir_releases | grep -q "$1$" 2> /dev/null
+  echo $?
+}
+
+function valid_branch() {
+  ver="$1"
+  get_elixir_branches | grep -q "$1" 2> /dev/null
+  echo $?
+}
+
+function exit_on_invalid_version() {
+  version="$1"
+
+  if [ ! "$(valid_known_release ${version})" = 0 -a ! "$(valid_branch ${version})" = 0 ] ; then
+    echo "Unknown Elixir '$version' ☹ "
+    echo -e "Try\n\tkiex list known -- known releases\n\tkiex list branches -- current branches"
+    exit 1
+  fi
+}
+
+function install_elixir() {
+  ver="$1"
+  ver=${ver//v/}
+  major=${ver%%.[0-9]*}
+  mp=${ver#[0-9]*.}
+  minor=${mp%.*[0-9]}
+  patch=${ver##*[0-9].}
+  if (( $major >= 1 )) || (( $minor > 12 )) || (( $ver == "master" )); then
+    need_erl_17=1
+  fi
+
+  if [ "$need_erl_17" = 1 ] ; then
+    erlang_min_release_full="R17"
+    erlang_min_release=17
+    erlang_min_release_canidate=""
+    erlang_min_release_canidate_n=""
+  else
+    erlang_min_release_full="R16B"
+    erlang_min_release=16
+    erlang_before_release_full=R17
+    erlang_max_release=16
+    erlang_min_release_canidate="B"
+    erlang_min_release_canidate_n=""
+  fi
+
+  version="$1"
+
+  exit_on_invalid_version "$1"
+  exit_on_unmet_prereqs
+
+  install_path="${elixirs_path}/elixir-${version}"
+
+  cd "$build_path"
+  echo "Downloading elixir version ${version}"
+  git clone https://github.com/elixir-lang/elixir.git elixir-git 2> /dev/null
+  cd elixir-git
+  echo "Installing elixir version ${version}"
+  git checkout -f master
+  git fetch -t
+  # TODO: deal with conflicts between branches and tags
+  git branch -la |grep -q "origin/${version}"
+  if [ "$?" = 0 ] ; then
+    git checkout -b "${version}" -f "origin/${version}" || git checkout "${version}"
+    git pull origin "${version}"
+  else
+    git checkout -b "v${version}" -f "v${version}" || git checkout "v${version}"
+    git pull origin "v${version}"
+  fi
+
+  if [ "$SYSTEM" = "FreeBSD" ] ; then
+    MAKE=gmake
+  else
+    MAKE=make
+  fi
+  $MAKE clean compile
+  mkdir -p "$install_path"
+  # elixir make install does not work under *csh
+  $MAKE "PREFIX=$install_path" install
+
+  if [ ! "$?" = 0 ] ; then
+    echo "Problem with Elixir build.  Aborting!"
+    echo "Please report via https://github.com/taylor/kiex/issues/new"
+    exit 1
+  fi
+
+  # For MIX_ARCHIVES - http://elixir-lang.org/docs/master/mix/Mix.Tasks.Archive.html
+  mkdir -p "${mix_archives_path}/elixir-${version}"
+
+  echo "Installed Elixir version $version"
+  create_env_file "$version"
+
+  echo "Load with:"
+  echo "           kiex use ${version} "
+  echo "or load the elixir environment file with: "
+  printf "%b" "   "
+
+  case $(basename $SHELL) in
+    fish)
+      printf "%b" "source ${elixirs_source_path}/.elixir-${version}.env.fish\n"
+      ;;
+    csh|tcsh)
+      printf "%b" "source ${elixirs_source_path}/.elixir-${version}.env.csh\n"
+      ;;
+    *)
+      printf "%b" "source ${elixirs_source_path}/elixir-${version}.env\n"
+      ;;
+  esac
+}
+
+function create_env_file() {
+  new_ver="$1"
+  new_file="${elixirs_path}/elixir-${new_ver}.env"
+  new_path="${elixirs_path}/elixir-${new_ver}/bin"
+  new_mix_path="${elixirs_path}/elixir-${new_ver}/ebin"
+
+  if [ -f "$new_file" ] ; then
+    mv -f "$new_file" "${new_file}.old"
+  fi
+## Bash and Zsh
+cat <<EOF> $new_file
+export ELIXIR_VERSION="$new_ver"
+export PATH="${elixirs_source_path}/elixir-${new_ver}/bin:\$PATH"
+export MIX_ARCHIVES="${mix_archives_source_path}/elixir-${new_ver}"
+EOF
+
+# TODO: add MIX_PATH maybe?
+#export MIX_PATH="${elixirs_source_path}/dynamo-${new_ver}/ebin:\$MIX_PATH"
+#export MIX_PATH="${elixirs_source_path}/elixir-${new_ver}/ebin:\$MIX_PATH"
+
+## CSH
+  new_file="${elixirs_path}/.elixir-${new_ver}.env.csh"
+  if [ -f "$new_file" ] ; then
+    mv -f "$new_file" "${new_file}.old"
+  fi
+cat <<EOF> $new_file
+setenv ELIXIR_VERSION "$new_ver"
+setenv PATH "${elixirs_source_path}/elixir-${new_ver}/bin:\$PATH"
+setenv MIX_ARCHIVES="${mix_archives_source_path}/elixir-${new_ver}"
+EOF
+
+## Fish
+  new_file="${elixirs_path}/.elixir-${new_ver}.env.fish"
+  if [ -f "$new_file" ] ; then
+    mv -f "$new_file" "${new_file}.old"
+  fi
+cat <<EOF> $new_file
+setenv ELIXIR_VERSION $new_ver
+setenv PATH ${elixirs_source_path}/elixir-${new_ver}/bin \$PATH
+setenv MIX_ARCHIVES ${mix_archives_source_path}/elixir-${new_ver}
+EOF
+}
+
+function find_elixir_ver() {
+  target_elixir="$1"
+  # default to not found (1)
+  found=""
+
+  elixirs=($(
+    cd "$elixirs_path"
+    find . -maxdepth 1 -mindepth 1 -type d 2> /dev/null | sort
+    ))
+
+  #TODO: reset version to nothing if problems arise
+  for version in "${elixirs[@]//.\/}"
+  do
+    if [[ ! -x "$elixirs_path/$version/bin/elixir" ]]
+    then
+      continue
+    elif [[ ! -f "$elixirs_path/${version}.env"  ]]
+    then
+      continue
+    elif [ ! "$version" = "$target_elixir" -a ! "${version}" = "elixir-${target_elixir}" ]
+    then
+      continue
+    else
+      found=yes
+      break
+    fi
+  done
+  if [ -n "$found" ] ; then
+    echo $version
+  else
+    echo ""
+  fi
+}
+
+function use_elixir() {
+  target_elixir="$1"
+  version=$(find_elixir_ver "$target_elixir")
+
+  [[ -z $version ]] && version=$(get_version_from_alias "$target_elixir");
+
+  if [ -z "$version" ] ; then
+    echo "Elixir version $target_elixir not found.  Try kiex install $target_elixir"
+    exit 1
+  fi
+
+  echo "To switch elixir versions for your current shell run: "
+  printf "%b" "   "
+  if [ "$USERSHELL" = "fish" ] ; then
+    printf "%b" "source ${elixirs_source_path}/.${version}.env.fish\n"
+  elif [ "$USERSHELL" = "csh" ] ; then
+    printf "%b" "source ${elixirs_source_path}/.${version}.env.csh\n"
+  else
+    printf "%b" "source ${elixirs_source_path}/${version}.env\n"
+  fi
+}
+
+function get_version_from_alias() {
+  local alias="$1"
+  local version_installed=""
+  local symlink_path="${elixirs_path}/.elixir-$alias"
+
+  if [[ -L $symlink_path ]]; then
+    local origin_path=$(readlink "$symlink_path")
+    local origin_version=$(basename "$origin_path" | grep -oh "[0-9]*\.[0-9]*\.[0-9]*")
+    local version_installed=$(find_elixir_ver "$origin_version")
+  fi
+
+  echo "$version_installed"
+}
+
+function create_alias() {
+  local source_version="$1"
+  local alias_name="$2"
+  local version_installed=$(find_elixir_ver "$source_version")
+
+  if [[ ! -z $version_installed ]]; then
+    ln -fs ${elixirs_path}/$version_installed.env ${elixirs_path}/.elixir-$alias_name
+  else
+    echo "Elixir $source_version is not installed"
+  fi
+}
+
+function elixir_subshell() {
+  target_elixir="$1"
+  version=$(find_elixir_ver "$target_elixir")
+
+  if [ -z "$version" ] ; then
+    echo "Elixir version $target_elixir not found.  Try installing it"
+    exit 1
+  fi
+
+  echo "Starting sub-shell with elixir version $version"
+  source "${elixirs_path}/${version}.env"
+  # NOTE: Using a login shell will use a default kiex elixir...
+  exec $SHELL
+}
+
+function set_default_elixir() {
+  target_elixir="$1"
+  version=$(find_elixir_ver "$target_elixir")
+
+  if [ -z "$version" ] ; then
+    echo "Elixir version $target_elixir not found.  Try installing it"
+    exit 1
+  fi
+
+  if [ -e ${elixirs_path}/.default ] ; then
+    if [ -L ${elixirs_path}/.default ] ; then
+      rm ${elixirs_path}/.default
+      rm ${elixirs_path}/.default.csh
+      rm ${elixirs_path}/.default.fish
+    else
+      echo "The file ${elixirs_path}/.default should not exists! Fix and try again."
+      exit 1
+    fi
+  fi
+  ln -s "${elixirs_path}/${version}.env" "${elixirs_path}/.default"
+  ln -s "${elixirs_path}/.${version}.env.csh" "${elixirs_path}/.default.csh"
+  ln -s "${elixirs_path}/.${version}.env.fish" "${elixirs_path}/.default.fish"
+  echo "Default Elixir version set to $version"
+  #echo "Load right now with: kiex use $version"
+}
+
+function reset_elixir() {
+  if [ -e ${elixirs_path}/.default ] ; then
+    if [ -L ${elixirs_path}/.default ] ; then
+      rm ${elixirs_path}/.default
+      rm ${elixirs_path}/.default.csh
+      rm ${elixirs_path}/.default.fish
+    else
+      echo "The file ${elixirs_path}/.default should not exists! Fix and try again."
+      exit 1
+    fi
+  fi
+  echo "Reset default Elixir version."
+}
+
+function list_elixirs() {
+  typeset current_elixir elixirs version selected system_elixir system_version \
+    default_elixir string binary
+
+  if [ -e "$elixirs_path"/.default ] ; then
+    default_elixir="elixir-$(source $elixirs_path/.default ; echo $ELIXIR_VERSION)"
+  fi
+
+  iexpath=$(which iex 2> /dev/null)
+  if [ -n "${iexpath}" ] ; then
+    #v=$(iex --version 2> /dev/null|grep -v 'Warning: could not run')
+    x1=${iexpath/$elixirs_path\/}
+    current_elixir=${x1/\/bin\/iex}
+    #current_elixir="elixir-${v/Elixir /}"
+  fi
+
+  elixirs=($(
+    cd "$elixirs_path"
+    find . -maxdepth 1 -mindepth 1 -type d 2> /dev/null | sort
+    #find . -maxdepth 1 -mindepth 1 -type d | sed -e 's#./##g'
+    ))
+
+  #for version in "${elixirs//.\/}"
+  for version in "${elixirs[@]//.\/}"
+  do
+    if [[ ! -x "$elixirs_path/$version/bin/elixir" ]]
+    then
+      continue
+    fi
+
+    if [[ "$version" = "$current_elixir" && "$version" = "$default_elixir" ]]
+    then
+      printf "%b" "=* "
+    elif [[ "$version" = "$current_elixir" ]]
+    then
+      printf "%b" "=> "
+    elif [[ "$version" = "$default_elixir" ]]
+    then
+      printf "%b" " * "
+    else
+      printf "%b" "   "
+    fi
+
+    printf "%b" "$version"
+    printf "%b" "\n"
+  done
+
+  if (( ${#elixirs[@]} == 0 ))
+  then
+    printf "%b" "
+# No kiex elixirs installed yet. Try 'kiex install <version>'.
+"
+  else
+    if [[ -z "${default_elixir}" ]]
+    then
+      printf "%b" "
+# Default elixir not set. Try 'kiex default <version>'.
+"
+    fi
+    printf "%b" "
+# => - current
+# =* - current && default
+#  * - default
+"
+  fi
+
+  printf "%b" "\n"
+}
+
+function validate_install() {
+  if [ ! -d "${base_path}/builds" \
+    -o ! -d "${base_path}/elixirs" \
+    -o ! -d "${base_path}/scripts" \
+    -o ! -d "${base_path}/bin" \
+    ] ; then
+
+    echo "Please run $me setup"
+    exit 1
+    #setup
+  fi
+}
+
+#################################
+#################################
+
+action="$1"
+shift
+
+if [ -z "$action" ] ; then
+  usage
+  exit 0
+fi
+
+
+
+if [ ! "$action" = "setup" ] ; then
+  validate_install
+elif [ ! "$action" = "install" -a "$1" = "kiex" ] ; then
+  validate_install
+fi
+
+case $action in
+  list)
+    if [ -z "$1" ]
+    then
+      printf "%b" "\nkiex elixirs\n\n"
+      list_elixirs
+    elif [ "$1" = "known" -o "$1" = "releases" ]
+    then
+      list_known
+    elif [ "$1" = "branches" ]
+    then
+      list_branches
+    else
+      usage
+      exit 1
+    fi
+    ;;
+  install)
+    [[ -z "$1" ]] && usage && exit 1
+    if [ "$1" = "kiex" ] ; then
+      setup
+      echo "kiex has been installed in $KIEX_HOME"
+      echo "Add the following to your shell's config file (.bash_profile/.profile):"
+      echo "    [[ -s \"\$HOME/.kiex/scripts/kiex\" ]] && source \"\$HOME/.kiex/scripts/kiex\""
+      exit
+    fi
+    install_elixir "$1"
+    ;;
+  use)
+    [[ -z "$1" ]] && usage && exit 1
+    if [ "$2" = "--default" -o "$2" = "-default" ] ; then
+      set_default_elixir "$1"
+    fi
+    use_elixir "$1"
+    ;;
+  default)
+    [[ -z "$1" ]] && usage && exit 1
+    set_default_elixir "$1"
+    ;;
+  reset)
+    reset_elixir
+    ;;
+  shell)
+    [[ -z "$1" ]] && usage && exit 1
+    elixir_subshell "$1"
+    ;;
+  envfile)
+    [[ -z "$1" ]] && exit 1
+    create_env_file "$1"
+    ;;
+  selfupdate|update_self)
+    self_update
+    exit 0
+    ;;
+  selfupdatereloaded)
+    self_update_reloaded
+    exit 0
+    ;;
+  implode)
+    kiex_implode
+    exit 0
+    ;;
+  depscheck|checkdeps)
+    deps_check
+    [[ $? = 0 ]] && echo "Dependencies met" || ( echo "Dependencies not met" && exit_on_unmet_prereqs )
+    ;;
+  setup|reinstall)
+    setup
+    exit
+    ;;
+  alias)
+    [[ -z "$1" ]] || [[ -z "$2" ]] && usage && exit 1
+    create_alias "$1" "$2"
+    exit
+    ;;
+  *)
+    usage
+    exit
+    ;;
+esac
