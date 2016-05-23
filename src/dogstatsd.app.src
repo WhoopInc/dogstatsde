@@ -15,5 +15,6 @@
   {maintainers, ["Nathaniel Waisbrot <waisbrot@whoop.com>"]},
   {licenses, ["LAGPL"]},
   {links, [{"GitHub", "https://github.com/WhoopInc/dogstatsde"}]},
-  {pkg_name, "dogstatsde"}
+  {pkg_name, "dogstatsde"},
+  {build_tools, [<<"rebar3">>, <<"mix">>]}
  ]}.

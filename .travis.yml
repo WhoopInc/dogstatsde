@@ -2,25 +2,30 @@ language: erlang
 sudo: false
 otp_release:
 - 17.5
-- 18.0
 - 18.2
 env:
+  global:
+  - MAIN_OTP=18.2
+  - secure: bX42me5j3yUdqYJbOc+igI6YMmmrxvvZSnY26Y951QOysF6jfKJ/pU+6s6NqyERFkPA6gsDCDvq2J2KUZaqLtHpZJezpcblEkxRvEJwQsr9gL5YsJCWW9nQNNwXDYe1po70QoXcSIwChC8sUuEBtKIVuLMWlKohTQF0TUHfHbpHQNqlhP7NYWpKjZzd6SvAZzyPrzKGmB8/0NCyVvava0PBRV/9woJdJ2migW+TYP4DqjqU0utLZar0G2hEh9l13Vq0dmdHXUtvh6x7GM9pL7B6b4l1NmmErFkwW4M06QhNRJe6pgD+46OzfmYqlp6EKE9jycQrnmynN6pOv23MeUc6apqbTlCGWju0YK4V1rIErF/qY14VqBMBNCRDvGl7g2Zv/isukwj8Ihy2pBsebgVlcGYND68Pd2Zf4ozcMEZgIJLYmZsSn9m1U5b7IAGtOvOiCw7iGKj1t1BgEjcZBMhJrSS0usO78U7dyRsie9flJTxfrdQZei73coay2+T6WtoGKs0YDJTX6uV4twYfVPo5j3wCvqIEfw83hZBWC644gzvFw/DDRRgCp1wEfl4XVbTKCsFDoLkWkBEj+BCCf9ow/V6CZ+EE3Ey89YVcIOmUtFo6SLK4a+nTsGdx3++QIaBedUlDX1kxEKOMYO10YPQziPGEhK4dmhosd9n5k1Bo=
   matrix:
   - REBAR_VSN=2
   - REBAR_VSN=3
-
+matrix:
+  include:
+  - env: ELIXIR_VSN=1.2.0 REBAR_VSN=
+    otp_release: 18.2
+    elixir: $ELIXIR_VSN
 before_install:
-- echo "--> OTP = ${TRAVIS_OTP_RELEASE}"
-- ./scripts/install-rebar.sh
+- ./scripts/install-prereqs.bash
 install:
-- ./scripts/install-deps.sh
+- ./scripts/install-deps.bash
 script:
-- ./scripts/run-tests.sh
-- ./scripts/run-dialyzer.sh
+- ./scripts/run-tests.bash
+- ./scripts/run-dialyzer.bash
 deploy:
   skip_cleanup: true
   provider: script
-  script: ./scripts/deploy-hex.sh
+  script: ./scripts/deploy-hex.bash
   on:
     tags: true
-    condition: $REBAR_VSN = '3' && $TRAVIS_OTP_RELEASE = "18.2"
+    condition: $REBAR_VSN = '3' && $TRAVIS_OTP_RELEASE = $MAIN_OTP
