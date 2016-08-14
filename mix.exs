@@ -19,7 +19,7 @@ defmodule Dogstatsd do
 
     def project do
       [app: :dogstatsd,
-       version: "0.5.1",
+       version: "0.7.0",
        elixir: "~> 1.2",
        build_embedded: Mix.env == :prod,
        start_permanent: Mix.env == :prod,
@@ -48,8 +48,8 @@ defmodule Dogstatsd do
     defp deps do
       [
         {:stillir, "~> 1.0.0"},
-        {:worker_pool, "~> 1.0.4"},
-        {:meck, "~> 0.8.4"} # , only: :test}
+        {:worker_pool, "~> 2.1"},
+        {:meck, "~> 0.8.4" , only: :test}
       ]
     end
   end
