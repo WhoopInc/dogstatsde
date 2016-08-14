@@ -1,0 +1,199 @@
+<html>
+<meta charset="utf-8" />
+<p><a href="https://travis-ci.org/WhoopInc/dogstatsde"><img src="https://travis-ci.org/WhoopInc/dogstatsde.svg?branch=master" alt="Build Status"/></a></p>
+<h1>A dogstatsd client for Erlang</h1>
+<p>DogStatsD is Datadog’s extension of StatsD. It adds tags to the metrics.</p>
+<h2>Configure</h2>
+<p>The defaults assume that you’re running a statsd server on localhost (true if the agent is installed locally).</p>
+<p>There are a number of configuration settings. You can either provide them as environment variables in ALL_CAPS
+or in an Erlang config file in all_lowercase.</p>
+<table>
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left">name</th><th style="text-align: left">type</th><th style="text-align: left">default</th><th style="text-align: left">info</th>
+</tr>
+</thead>
+<tr>
+<td style="text-align: left">AGENT_ADDRESS</td><td style="text-align: left">string</td><td style="text-align: left"><code class="inline">&quot;localhost&quot;</code></td><td style="text-align: left">Hostname or IP where we can send the StatsD UDP packets</td>
+</tr>
+<tr>
+<td style="text-align: left">AGENT_PORT</td><td style="text-align: left">integer</td><td style="text-align: left"><code class="inline">8125</code></td><td style="text-align: left">Port that the StatsD agent is listening on</td>
+</tr>
+<tr>
+<td style="text-align: left">GLOBAL_PREFIX</td><td style="text-align: left">string</td><td style="text-align: left"><code class="inline">&quot;&quot;</code></td><td style="text-align: left">Prefix to attach before all metric names. The <code class="inline">.</code> will be inserted for you</td>
+</tr>
+<tr>
+<td style="text-align: left">GLOBAL_TAGS</td><td style="text-align: left">map</td><td style="text-align: left"><code class="inline">#{}</code></td><td style="text-align: left">Tags to attach to all metrics</td>
+</tr>
+<tr>
+<td style="text-align: left">SEND_METRICS</td><td style="text-align: left">boolean</td><td style="text-align: left"><code class="inline">true</code></td><td style="text-align: left">Set to <code class="inline">false</code> when you’re running tests to disable sending any metrics</td>
+</tr>
+<tr>
+<td style="text-align: left">VM_STATS</td><td style="text-align: left">boolean</td><td style="text-align: left"><code class="inline">true</code></td><td style="text-align: left">Collect stats on the Erlang VM?</td>
+</tr>
+<tr>
+<td style="text-align: left">VM_STATS_DELAY</td><td style="text-align: left">integer</td><td style="text-align: left"><code class="inline">60000</code></td><td style="text-align: left">Time in ms between collection Erlang VM stats</td>
+</tr>
+<tr>
+<td style="text-align: left">VM_STATS_SCHEDULER</td><td style="text-align: left">boolean</td><td style="text-align: left"><code class="inline">true</code></td><td style="text-align: left">Collect stats on the scheduler?</td>
+</tr>
+<tr>
+<td style="text-align: left">VM_STATS_BASE_KEY</td><td style="text-align: left">string</td><td style="text-align: left"><code class="inline">&quot;erlang.vm&quot;</code></td><td style="text-align: left">All the VM stats will begin with this prefix (after the GLOBAL_PREFIX if that is set)</td>
+</tr>
+</table>
+<h2>Use</h2>
+<h3>Erlang</h3>
+<ol>
+<li>List dogstatsd in your <code class="inline">rebar.config</code> file
+</li>
+</ol>
+<pre><code class="erlang">{dogstatsd, &quot;1.0.0&quot;, {pkg, dogstatsde}}</code></pre>
+<ol>
+<li><p>List the dogstatsd application in your *.app.src file</p>
+</li>
+<li><p>Provide configuration as needed when starting up</p>
+</li>
+<li><p>For VM stats, no action is needed — they’ll collect on their own as long as the application is running</p>
+</li>
+<li>For custom metrics:
+</li>
+</ol>
+<pre><code class="erlang">dogstatsd:gauge(&quot;users.active&quot;, UserCount, #{ shard =&gt; ShardId, version =&gt; Vsn })</code></pre>
+<h3>Elixir</h3>
+<ol>
+<li>List dogstatsd dependency in your <code class="inline">mix.exs</code> file
+</li>
+</ol>
+<pre><code class="elixir">{:dogstatsd, &quot;~&gt; 1.0.0&quot;, hex: :dogstatsde}</code></pre>
+<ol>
+<li><p>List <code class="inline">:dogstatsd</code> as an application in your <code class="inline">mix.exs</code></p>
+</li>
+<li><p>Provide configuration as needed when starting up</p>
+</li>
+<li><p>For VM stats, no action is needed — they’ll collect on their own as long as the application is running</p>
+</li>
+<li>For custom metrics:
+</li>
+</ol>
+<pre><code class="elixir">Dogstatsd.gauge(&quot;users.active&quot;, user_count, %{ :shard =&gt; shard_id, :version =&gt; vsn })</code></pre>
+<h3>VM Stats</h3>
+<p>If <code class="inline">VM_STATS</code> is not disabled, dogstatsd will periodically run <code class="inline">erlang:statistics/1</code> and friends and collect data on the VM’s performance:</p>
+<table>
+<colgroup>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left">name</th><th style="text-align: left">erlang call</th><th style="text-align: left">info</th>
+</tr>
+</thead>
+<tr>
+<td style="text-align: left"><code class="inline">proc_count</code></td><td style="text-align: left"><code class="inline">erlang:system_info(process_count)</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">proc_limit</code></td><td style="text-align: left"><code class="inline">erlang:system_info(process_limit)</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">messages_in_queues</code></td><td style="text-align: left"><code class="inline">process_info(Pid, message_queue_len)</code></td><td style="text-align: left">over all PIDs</td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">modules</code></td><td style="text-align: left"><code class="inline">length(code:all_loaded())</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">run_queue</code></td><td style="text-align: left"><code class="inline">erlang:statistics(run_queue)</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">error_logger_queue_len</code></td><td style="text-align: left"><code class="inline">process_info(Pid, message_queue_len)</code></td><td style="text-align: left">where <code class="inline">Pid</code> belongs to <code class="inline">error_logger</code></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">memory.total</code></td><td style="text-align: left"><code class="inline">erlang:memory()</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">memory.procs_userd</code></td><td style="text-align: left"><code class="inline">erlang:memory()</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">memory.atom_used</code></td><td style="text-align: left"><code class="inline">erlang:memory()</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">memory.binary</code></td><td style="text-align: left"><code class="inline">erlang:memory()</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">memory.ets</code></td><td style="text-align: left"><code class="inline">erlang:memory()</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">io.bytes_in</code></td><td style="text-align: left"><code class="inline">erlang:statistics(io)</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">io.bytes_out</code></td><td style="text-align: left"><code class="inline">erlang:statistics(io)</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">gc.count</code></td><td style="text-align: left"><code class="inline">erlang:statistics(garbage_collection)</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">gc.words_reclaimed</code></td><td style="text-align: left"><code class="inline">erlang:statistics(words_reclaimed)</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">reductions</code></td><td style="text-align: left"><code class="inline">erlang:statistics(reductions)</code></td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">scheduler_wall_time.active</code></td><td style="text-align: left"><code class="inline">erlang:statistics(scheduler_wall_time)</code></td><td style="text-align: left">there are multiple schedulers, and the <code class="inline">scheduler</code> tag differentiates between them</td>
+</tr>
+<tr>
+<td style="text-align: left"><code class="inline">scheduler_wall_time.total</code></td><td style="text-align: left"><code class="inline">erlang:statistics(scheduler_wall_time)</code></td><td style="text-align: left">there are multiple schedulers, and the <code class="inline">scheduler</code> tag differentiates between them</td>
+</tr>
+</table>
+<p><img src="img/erlang-vm-stats.jpg" alt="screen-shot of VM stats in Datadog"/></p>
+<h2>Metric types</h2>
+<p>All metrics share the same signature:</p>
+<pre><code class="erlang">-type metric_name() :: iodata().
+-type metric_value() :: number().
+-type metric_sample_rate() :: number().
+-type metric_tags() :: map().
+
+-spec MetricFunction(metric_name(), metric_value(), metric_sample_rate(), metric_tags()) -&gt; ok.</code></pre>
+<p>Some metrics have aliases</p>
+<table>
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left">name</th><th style="text-align: left">alias</th>
+</tr>
+</thead>
+<tr>
+<td style="text-align: left">gauge</td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left">increment</td><td style="text-align: left">counter</td>
+</tr>
+<tr>
+<td style="text-align: left">histogram</td><td style="text-align: left"></td>
+</tr>
+<tr>
+<td style="text-align: left">timing</td><td style="text-align: left">timer</td>
+</tr>
+<tr>
+<td style="text-align: left">set</td><td style="text-align: left"></td>
+</tr>
+</table>
+<ul>
+<li>The metric name is a string value with dots to separate levels of namespacing.
+</li>
+<li>The sample rate is a number between [0.0,1.0]. This is the probability of sending a particular metric.
+</li>
+<li>Tags are given as a map. The keys and values can be atoms, strings, or numbers.
+</li>
+</ul>
+<p>Metric name and value are required. Sample rate defaults to 1.0. Tags defaults to an empty tag-set, but the value of <code class="inline">GLOBAL_TAGS</code> (which also defaults to an empty tag-set) is always merged with the passed tags.</p>
+
+</html>

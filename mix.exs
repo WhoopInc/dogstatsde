@@ -19,8 +19,18 @@ defmodule Dogstatsd do
 
     def project do
       [app: :dogstatsd,
+<<<<<<< HEAD
        version: version(),
+=======
+       name: "Dogstatsd",
+       version: "0.0.0-fill-me-in",
+>>>>>>> 83b8120... some documentation-related work in progress
        elixir: "~> 1.2",
+       source_url: "https://github.com/WhoopInc/dogstatsde",
+       docs: [
+         extras: ["README.md"],
+         main: "README.md",
+       ],
        build_embedded: Mix.env == :prod,
        start_permanent: Mix.env == :prod,
        deps: deps]
@@ -37,7 +47,7 @@ defmodule Dogstatsd do
       [
         {:stillir, "~> 1.0.0"},
         {:worker_pool, "~> 2.1.0"},
-        {:meck, "~> 0.8.4" , only: :test}
+        {:meck, "~> 0.8.4", only: :test}
       ]
     end
 
