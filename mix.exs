@@ -19,16 +19,19 @@ defmodule Dogstatsd do
 
     def project do
       [app: :dogstatsd,
-       version: "0.5.1",
+       name: "Dogstatsd",
+       version: "0.0.0-fill-me-in",
        elixir: "~> 1.2",
+       source_url: "https://github.com/WhoopInc/dogstatsde",
+       docs: [
+         extras: ["README.md"],
+         main: "README.md",
+       ],
        build_embedded: Mix.env == :prod,
        start_permanent: Mix.env == :prod,
        deps: deps]
     end
 
-    # Configuration for the OTP application
-    #
-    # Type "mix help compile.app" for more information
     def application do
       [
         applications: [:logger, :worker_pool, :stillir],
@@ -36,20 +39,11 @@ defmodule Dogstatsd do
       ]
     end
 
-    # Dependencies can be Hex packages:
-    #
-    #   {:mydep, "~> 0.3.0"}
-    #
-    # Or git/path repositories:
-    #
-    #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
-    #
-    # Type "mix help deps" for more examples and options
     defp deps do
       [
         {:stillir, "~> 1.0.0"},
         {:worker_pool, "~> 1.0.4"},
-        {:meck, "~> 0.8.4"} # , only: :test}
+        {:meck, "~> 0.8.4", only: :test}
       ]
     end
   end
