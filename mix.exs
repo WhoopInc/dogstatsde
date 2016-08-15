@@ -19,12 +19,8 @@ defmodule Dogstatsd do
 
     def project do
       [app: :dogstatsd,
-<<<<<<< HEAD
        version: version(),
-=======
        name: "Dogstatsd",
-       version: "0.0.0-fill-me-in",
->>>>>>> 83b8120... some documentation-related work in progress
        elixir: "~> 1.2",
        source_url: "https://github.com/WhoopInc/dogstatsde",
        docs: [
