@@ -557,7 +557,8 @@ function install_elixir() {
 
   version="$1"
 
-  exit_on_invalid_version "$1"
+  echo "Not checking if $1 is a valid Elixir version, because GH API requests are a pain"
+  #exit_on_invalid_version "$1"
   exit_on_unmet_prereqs
 
   install_path="${elixirs_path}/elixir-${version}"
