@@ -53,8 +53,13 @@ defmodule Dogstatsd do
       case appdata[:vsn] do
         :git ->
           # Fabricate a magic git version
-          {git_tags,0} = System.cmd("git", ["tag", "--sort=version:refname"])
-          last_vsn = git_tags |> String.trim |> String.split |> List.last
+          last_vsn = case System.cmd("git", ["tag", "--sort=version:refname"]) do
+                       {git_tags, 0} ->
+                         git_tags |> String.trim |> String.split |> List.last
+                       {_, 129} ->
+                         {git_tags, 0} = System.cmd("git", ["tag"])
+                         git_tags |> String.trim |> String.split |> List.last
+                     end
           {git_hash,0} = System.cmd("git", ["rev-parse", "--short", "HEAD"])
           short_hash = git_hash |> String.trim
           "#{last_vsn}+build-#{short_hash}"
