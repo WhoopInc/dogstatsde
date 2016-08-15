@@ -21,7 +21,7 @@ defmodule Dogstatsd do
       [app: :dogstatsd,
        version: version(),
        name: "Dogstatsd",
-       elixir: "~> 1.2",
+       elixir: "~> 1.3",
        source_url: "https://github.com/WhoopInc/dogstatsde",
        docs: [
          extras: ["README.md"],
