@@ -31,7 +31,7 @@ or in an Erlang config file in all_lowercase.
 1. List dogstatsd in your `rebar.config` file
 
 ```erlang
-{dogstatsd, "1.0.0", {pkg, dogstatsde}}
+{dogstatsd, "<version>", {pkg, dogstatsde}}
 ```
 
 2. List the dogstatsd application in your *.app.src file
@@ -51,7 +51,7 @@ dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version => Vsn }
 1. List dogstatsd dependency in your `mix.exs` file
 
 ```elixir
-{:dogstatsd, "~> 1.0.0", hex: :dogstatsde}
+{:dogstatsd, "~> <version>", hex: :dogstatsde}
 ```
 
 2. List `:dogstatsd` as an application in your `mix.exs`
