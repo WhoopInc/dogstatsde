@@ -19,16 +19,19 @@ defmodule Dogstatsd do
 
     def project do
       [app: :dogstatsd,
-       version: "0.5.1",
-       elixir: "~> 1.2",
+       version: version(),
+       name: "Dogstatsd",
+       elixir: "~> 1.3",
+       source_url: "https://github.com/WhoopInc/dogstatsde",
+       docs: [
+         extras: ["README.md"],
+         main: "README.md",
+       ],
        build_embedded: Mix.env == :prod,
        start_permanent: Mix.env == :prod,
        deps: deps]
     end
 
-    # Configuration for the OTP application
-    #
-    # Type "mix help compile.app" for more information
     def application do
       [
         applications: [:logger, :worker_pool, :stillir],
@@ -36,21 +39,34 @@ defmodule Dogstatsd do
       ]
     end
 
-    # Dependencies can be Hex packages:
-    #
-    #   {:mydep, "~> 0.3.0"}
-    #
-    # Or git/path repositories:
-    #
-    #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
-    #
-    # Type "mix help deps" for more examples and options
     defp deps do
       [
         {:stillir, "~> 1.0.0"},
-        {:worker_pool, "~> 1.0.4"},
-        {:meck, "~> 0.8.4"} # , only: :test}
+        {:worker_pool, "~> 2.1.0"},
+        {:meck, "~> 0.8.4", only: :test}
       ]
+    end
+
+    def version do
+      # Fetch or fabricate a version number
+      {:ok, [{:application, :dogstatsd, appdata}]} = :file.consult("src/dogstatsd.app.src")
+      case appdata[:vsn] do
+        :git ->
+          # Fabricate a magic git version
+          last_vsn = case System.cmd("git", ["tag", "--sort=version:refname"]) do
+                       {git_tags, 0} ->
+                         git_tags |> String.trim |> String.split |> List.last
+                       {_, 129} ->
+                         {git_tags, 0} = System.cmd("git", ["tag"])
+                         git_tags |> String.trim |> String.split |> List.last
+                     end
+          {git_hash,0} = System.cmd("git", ["rev-parse", "--short", "HEAD"])
+          short_hash = git_hash |> String.trim
+          "#{last_vsn}+build-#{short_hash}"
+        real_vsn ->
+          # We get here when this is a downloaded Hex package
+          real_vsn
+      end
     end
   end
 end

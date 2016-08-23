@@ -1,36 +1,37 @@
 [![Build Status](https://travis-ci.org/WhoopInc/dogstatsde.svg?branch=master)](https://travis-ci.org/WhoopInc/dogstatsde)
+[![Hex.pm](https://img.shields.io/hexpm/v/dogstatsde.svg?maxAge=2592000)](https://hex.pm/packages/dogstatsde)
 
-# A dogstatsd client for Erlang #
+# A dogstatsd client for Erlang
 
 DogStatsD is Datadog's extension of StatsD. It adds tags to the metrics.
 
-## Configure ##
+## Configure
 
 The defaults assume that you're running a statsd server on localhost (true if the agent is installed locally).
 
 There are a number of configuration settings. You can either provide them as environment variables in ALL_CAPS
 or in an Erlang config file in all_lowercase.
 
-    | name               | type    | default       | info                                                                                  |
-    | ----               | ----    | -------       | ----                                                                                  |
-    | AGENT_ADDRESS      | string  | `"localhost"` | Hostname or IP where we can send the StatsD UDP packets                               |
-    | AGENT_PORT         | integer | `8125`        | Port that the StatsD agent is listening on                                            |
-    | GLOBAL_PREFIX      | string  | `""`          | Prefix to attach before all metric names. The `.` will be inserted for you            |
-    | GLOBAL_TAGS        | map     | `#{}`         | Tags to attach to all metrics                                                         |
-    | SEND_METRICS       | boolean | `true`        | Set to `false` when you're running tests to disable sending any metrics               |
-    | VM_STATS           | boolean | `true`        | Collect stats on the Erlang VM?                                                       |
-    | VM_STATS_DELAY     | integer | `60000`       | Time in ms between collection Erlang VM stats                                         |
-    | VM_STATS_SCHEDULER | boolean | `true`        | Collect stats on the scheduler?                                                       |
-    | VM_STATS_BASE_KEY  | string  | `"erlang.vm"` | All the VM stats will begin with this prefix (after the GLOBAL_PREFIX if that is set) |
+| name               | type    | default       | info                                                                                  |
+| ------------------ | ------- | ------------- | ------------------------------------------------------------------------------------- |
+| AGENT_ADDRESS      | string  | `"localhost"` | Hostname or IP where we can send the StatsD UDP packets                               |
+| AGENT_PORT         | integer | `8125`        | Port that the StatsD agent is listening on                                            |
+| GLOBAL_PREFIX      | string  | `""`          | Prefix to attach before all metric names. The `.` will be inserted for you            |
+| GLOBAL_TAGS        | map     | `#{}`         | Tags to attach to all metrics                                                         |
+| SEND_METRICS       | boolean | `true`        | Set to `false` when you're running tests to disable sending any metrics               |
+| VM_STATS           | boolean | `true`        | Collect stats on the Erlang VM?                                                       |
+| VM_STATS_DELAY     | integer | `60000`       | Time in ms between collection Erlang VM stats                                         |
+| VM_STATS_SCHEDULER | boolean | `true`        | Collect stats on the scheduler?                                                       |
+| VM_STATS_BASE_KEY  | string  | `"erlang.vm"` | All the VM stats will begin with this prefix (after the GLOBAL_PREFIX if that is set) |
 
-## Use ##
+## Use
 
-### Erlang ###
+### Erlang
 
 1. List dogstatsd in your `rebar.config` file
 
 ```erlang
-{dogstatsd, "1.0.0", {pkg, dogstatsde}}
+{dogstatsd, "<version>", {pkg, dogstatsde}}
 ```
 
 2. List the dogstatsd application in your *.app.src file
@@ -45,12 +46,12 @@ or in an Erlang config file in all_lowercase.
 dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version => Vsn })
 ```
 
-### Elixir ###
+### Elixir
 
 1. List dogstatsd dependency in your `mix.exs` file
 
 ```elixir
-{:dogstatsd, "~> 1.0.0", hex: :dogstatsde}
+{:dogstatsd, "~> <version>", hex: :dogstatsde}
 ```
 
 2. List `:dogstatsd` as an application in your `mix.exs`
@@ -65,7 +66,7 @@ dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version => Vsn }
 Dogstatsd.gauge("users.active", user_count, %{ :shard => shard_id, :version => vsn })
 ```
 
-### VM Stats ###
+### VM Stats
 
 If `VM_STATS` is not disabled, dogstatsd will periodically run `erlang:statistics/1` and friends and collect data on the VM's performance:
 
@@ -92,7 +93,7 @@ If `VM_STATS` is not disabled, dogstatsd will periodically run `erlang:statistic
 
 ![screen-shot of VM stats in Datadog](img/erlang-vm-stats.jpg)
 
-## Metric types ##
+## Metric types
 
 All metrics share the same signature:
 
