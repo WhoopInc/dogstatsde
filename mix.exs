@@ -65,7 +65,8 @@ defmodule Dogstatsd do
           "#{last_vsn}+build-#{short_hash}"
         real_vsn ->
           # We get here when this is a downloaded Hex package
-          real_vsn
+          # In this case, the version comes in as an Erlang string and we need it to be an Elixir string
+          to_string(real_vsn)
       end
     end
   end
