@@ -16,5 +16,6 @@
   {licenses, ["LAGPL"]},
   {links, [{"GitHub", "https://github.com/WhoopInc/dogstatsde"}]},
   {pkg_name, "dogstatsde"},
+  {include_files, ["mix.exs"]},
   {build_tools, [<<"rebar3">>, <<"mix">>]}
  ]}.
