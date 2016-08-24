@@ -1,7 +1,7 @@
 #!/bin/bash -ex
 
-if [[ $TRAVIS_TAG && $TRAVIS_OTP_RELEASE != $MAIN_OTP ]]; then
-    echo Skip installation for non-primary tests of a tag-build
+if [[ $TRAVIS_TAG && ($TRAVIS_OTP_RELEASE != $MAIN_OTP || $REBAR_VSN -ne 3) ]]; then
+    echo Skip installation for non-primary test of a tag-build
     exit 0
 fi
 
