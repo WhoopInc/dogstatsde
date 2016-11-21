@@ -48,6 +48,8 @@ dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version => Vsn }
 
 ### Elixir
 
+For more details, see the example application in (examples/elixir)[examples/elixir]
+
 1. List dogstatsd dependency in your `mix.exs` file
 
 ```elixir
@@ -63,7 +65,7 @@ dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version => Vsn }
 5. For custom metrics:
 
 ```elixir
-Dogstatsd.gauge("users.active", user_count, %{ :shard => shard_id, :version => vsn })
+:dogstatsd.gauge("users.active", user_count, %{ :shard => shard_id, :version => vsn })
 ```
 
 ### VM Stats
