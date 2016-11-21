@@ -12,8 +12,11 @@ elif [ $REBAR_VSN -eq 3 ]; then
     ./vendor/rebar3 eunit
 elif [ $ELIXIR_VSN ]; then
     source $HOME/.kiex/elixirs/elixir-${ELIXIR_VSN}.env
+    cd examples/elixir
+    mix deps.get
     mix compile
-    mix test
+    mix escript.build
+    ./elixir_example
 else
     echo Unknown rebar version requested: $REBAR_VSN
     exit 1

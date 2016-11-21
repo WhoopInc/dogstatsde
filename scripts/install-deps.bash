@@ -13,7 +13,6 @@ elif [ $ELIXIR_VSN ]; then
     source $HOME/.kiex/elixirs/elixir-${ELIXIR_VSN}.env
     mix local.hex --force
     mix local.rebar --force
-    mix deps.get
 else
     echo Unknown rebar version requested: $REBAR_VSN
     exit 1
