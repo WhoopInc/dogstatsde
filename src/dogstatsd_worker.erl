@@ -52,8 +52,8 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Data, #state{socket = no_send} = State) ->
     {noreply, State};
 handle_cast(Data, State) ->
-    Line = build_line(Data, State),
-    ok = send_line(Line, State),
+    Lines = build_lines(Data, State),
+    ok = send_lines(Lines, State),
     {noreply, State}.
 
 handle_info(_Info, State) ->
@@ -67,12 +67,20 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-build_line({metric, Data}, State) ->
-    build_metric_line(Data, State);
-build_line({event, Data}, State) ->
-    build_event_line(Data, State).
+build_lines({metric, Data}, State) ->
+    build_metric_lines(Data, State);
+build_lines({event, Data}, State) ->
+    [build_event_line(Data, State)].
 
-build_metric_line({Type, Name, Value, SampleRate, Tags}, State) ->
+build_metric_lines({Type, NormalizedMetricDataList}, State) ->
+    lists:map(
+        fun(NormalizedMetricData) ->
+            build_metric_line(Type, NormalizedMetricData, State)
+        end,
+        NormalizedMetricDataList
+    ).
+
+build_metric_line(Type, {Name, Value, SampleRate, Tags}, State) ->
     LineStart = io_lib:format("~s:~.3f|~s|@~.2f", [prepend_global_prefix(Name, State), float(Value),
                                                     metric_type_to_str(Type), float(SampleRate)]),
     TagLine = build_tag_line(Tags, State),
@@ -100,8 +108,11 @@ build_tag_line(Tags, #state{tags=GlobalTags}) ->
               [],
               maps:merge(GlobalTags, Tags)).
 
-send_line(Line, #state{socket = Socket, host = Host, port = Port}) ->
-    ok = gen_udp:send(Socket, Host, Port, Line).
+send_lines(Lines, #state{socket = Socket, host = Host, port = Port}) ->
+    ok = lists:foreach(
+        fun(Line) -> ok = gen_udp:send(Socket, Host, Port, Line) end,
+        Lines
+    ).
 
 metric_type_to_str(counter) -> "c";
 metric_type_to_str(gauge) -> "g";
@@ -127,7 +138,7 @@ iodata_to_bin(IoList) -> iolist_to_binary(IoList).
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-build_line_test_() ->
+build_lines_test_() ->
     State = #state{
         prefix = "test_global_prefix",
         tags = #{"test" => true}
@@ -142,7 +153,7 @@ build_line_test_() ->
             Tags1 = #{"event" => "awesome"},
 
             ExpectedLine1 = <<"_e{16,15}:my event's title|my event's text|t:success|p:low|#event:awesome,test:true">>,
-            ActualLine1 = build_line({event, {Title1, Text1, Type1, Priority1, Tags1}}, State),
+            [ActualLine1] = build_lines({event, {Title1, Text1, Type1, Priority1, Tags1}}, State),
 
             ?_assertEqual(ExpectedLine1, iolist_to_binary(ActualLine1))
         end},
@@ -155,7 +166,7 @@ build_line_test_() ->
             Tags2 = #{"version" => 42},
 
             ExpectedLine2 = <<"test_global_prefix.mymetric_name:28.000|h|@12.00|#test:true,version:42">>,
-            ActualLine2 = build_line({metric, {Type2, Name2, Value2, SampleRate2, Tags2}}, State),
+            [ActualLine2] = build_lines({metric, {Type2, [{Name2, Value2, SampleRate2, Tags2}]}}, State),
 
             ?_assertEqual(ExpectedLine2, iolist_to_binary(ActualLine2))
         end}].

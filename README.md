@@ -46,6 +46,12 @@ or in an Erlang config file in all_lowercase.
 dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version => Vsn })
 ```
 
+6. When pushing a lot of custom metrics, it can be beneficial to push them in chunks for efficiency, for example:
+```erlang
+dogstatsd:gauge([{"users", UserTypeCount, #{ user_type => UserType }}
+                 || {UserTypeCount, UserType} <- UserCounts]).
+```
+
 ### Elixir
 
 For more details, see the example application in (examples/elixir)[examples/elixir]
