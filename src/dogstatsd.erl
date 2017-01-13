@@ -153,7 +153,7 @@ normalize_metric_data({Name, Value}) ->
 normalize_metric_data({Name, Value, SampleRate}) when is_number(SampleRate) ->
     {Name, Value, SampleRate, #{}};
 normalize_metric_data({Name, Value, Tags}) when is_map(Tags) ->
-    {Name, Value, 1.0, #{}};
+    {Name, Value, 1.0, Tags};
 normalize_metric_data({_Name, _Value, _SampleRate, _Tags} = AlreadyNormalized) ->
     AlreadyNormalized.
 
@@ -185,5 +185,15 @@ gauge_test_() ->
      ,?_assertError(function_clause, dogstatsd:gauge([{"foo.bar", 1, 0.5, #{foo => bar}},
                                                       {"foo.bar", 1, "hello"}]))
      ]}.
+
+normalize_metric_data_test_() ->
+    [
+     ?_assertEqual({"key", "value", 1.0, #{}}, normalize_metric_data({"key", "value"}))
+    ,?_assertEqual({"key", "value", 12, #{}}, normalize_metric_data({"key", "value", 12}))
+    ,?_assertEqual({"key", "value", 1.0, #{foo => bar}},
+                   normalize_metric_data({"key", "value", #{foo => bar}}))
+    ,?_assertEqual({"key", "value", 12, #{foo => bar}},
+                   normalize_metric_data({"key", "value", 12, #{foo => bar}}))
+    ].
 
 -endif.
