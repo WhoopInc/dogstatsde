@@ -51,6 +51,7 @@ dogstatsd:gauge("users.active", UserCount, #{ shard => ShardId, version => Vsn }
 dogstatsd:gauge([{"users", UserTypeCount, #{ user_type => UserType }}
                  || {UserTypeCount, UserType} <- UserCounts]).
 ```
+In practice, that should only be necessary when pushing a lot of metrics, where "a lot" has been observed to be more than a few hundreds per minute.
 
 ### Elixir
 
