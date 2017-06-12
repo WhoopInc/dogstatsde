@@ -1,0 +1,8 @@
+{"1.1.0",
+[{<<"stillir">>,{pkg,<<"stillir">>,<<"1.0.0">>},0},
+ {<<"worker_pool">>,{pkg,<<"worker_pool">>,<<"2.1.0">>},0}]}.
+[
+{pkg_hash,[
+ {<<"stillir">>, <<"9E77EAADD2418A61EC7398C01E29DEA26D14F51C42E0B309084493E3ED33337A">>},
+ {<<"worker_pool">>, <<"6A5C16DDC93705FEBA768F1489EF1CF0D3C787EFDAA7008684D67130E8697891">>}]}
+].

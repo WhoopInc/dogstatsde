@@ -33,9 +33,10 @@ init([]) ->
     State = case stillir:get_config(dogstatsd, send_metrics) of
                 true ->
                     {ok, Socket} = gen_udp:open(0),
+                    {ok, Ip} = inet:getaddr(stillir:get_config(dogstatsd, agent_address), inet),
                     #state{
                        socket = Socket,
-                       host = stillir:get_config(dogstatsd, agent_address),
+                       host = Ip,
                        port = stillir:get_config(dogstatsd, agent_port),
                        prefix = stillir:get_config(dogstatsd, global_prefix),
                        tags = stillir:get_config(dogstatsd, global_tags)
