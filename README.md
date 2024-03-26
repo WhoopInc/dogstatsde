@@ -1,3 +1,6 @@
+## Notice: This repository is no longer maintained as of 3/26/2024
+
+
 [![Build Status](https://travis-ci.org/WhoopInc/dogstatsde.svg?branch=master)](https://travis-ci.org/WhoopInc/dogstatsde)
 [![Hex.pm](https://img.shields.io/hexpm/v/dogstatsde.svg?maxAge=2592000)](https://hex.pm/packages/dogstatsde)
 
